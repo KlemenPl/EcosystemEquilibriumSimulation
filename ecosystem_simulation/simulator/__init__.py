@@ -1,8 +1,10 @@
 import random
 
-from .abc import SimulatorBackend
-from .models import Prey, Predator, PreyGenes, PredatorGenes, WorldPosition, SimulationState
-from .options import SimulatorOptions, PreySpawnOptions, PreyGeneOptions, PredatorGeneOptions, PredatorSpawnOptions
+from .abc import SimulatorBackend, SimulatedTick
+from .models import Prey, Predator, PreyGenes, PredatorGenes, WorldPosition, SimulationState, PreyId, PredatorId, Food
+from .models.predator import PredatorIdleState
+from .models.prey import PreyIdleState
+from .options import SimulatorOptions
 from .utilities import generate_random_position_in_world
 
 
@@ -10,7 +12,6 @@ from .utilities import generate_random_position_in_world
 def _prepare_initial_simulation_state(
     simulation_options: SimulatorOptions
 ) -> SimulationState:
-    predator_gene_options = simulation_options.predator_gene_options
     initial_predators: list[Predator] = []
 
     for _ in range(simulation_options.initial_number_of_predators):
@@ -22,39 +23,25 @@ def _prepare_initial_simulation_state(
 
         # Give the predator uniformly random genes in the configured range.
         predator_genes = PredatorGenes(
-            aggression=random.uniform(
-                predator_gene_options.aggression_min,
-                predator_gene_options.aggression_max
-            ),
-            fertility=random.uniform(
-                predator_gene_options.fertility_min,
-                predator_gene_options.fertility_max,
-            ),
-            charisma=random.uniform(
-                predator_gene_options.charisma_min,
-                predator_gene_options.charisma_max,
-            ),
-            speed=random.uniform(
-                predator_gene_options.speed_min,
-                predator_gene_options.speed_max,
-            ),
-            vision=random.uniform(
-                predator_gene_options.vision_min,
-                predator_gene_options.vision_max,
-            )
+            aggression=random.uniform(0, 1),
+            fertility=random.uniform(0, 1),
+            charisma=random.uniform(0, 1),
+            vision=random.uniform(0, 1),
+            reproductive_urge_quickness=random.uniform(0, 1)
         )
 
         predator = Predator(
+            id=PredatorId.new_random(),
+            mind_state=PredatorIdleState(),
             genes=predator_genes,
             position=predator_position,
-            hunger=simulation_options.predator_spawn_options.initial_hunger,
-            energy=simulation_options.predator_spawn_options.initial_energy,
+            satiation=simulation_options.predator_initial_satiation_on_spawn,
+            reproductive_urge=simulation_options.predator_initial_reproductive_urge_on_spawn,
         )
 
         initial_predators.append(predator)
 
 
-    prey_gene_options = simulation_options.prey_gene_options
     initial_prey: list[Prey] = []
 
     for _ in range(simulation_options.initial_number_of_prey):
@@ -66,38 +53,70 @@ def _prepare_initial_simulation_state(
 
         # Give the prey uniformly random genes in the configured range.
         prey_genes = PreyGenes(
-            fertility=random.uniform(
-                prey_gene_options.fertility_min,
-                prey_gene_options.fertility_max,
-            ),
-            charisma=random.uniform(
-                prey_gene_options.charisma_min,
-                prey_gene_options.charisma_max,
-            ),
-            speed=random.uniform(
-                prey_gene_options.speed_min,
-                prey_gene_options.speed_max,
-            ),
-            vision=random.uniform(
-                prey_gene_options.vision_min,
-                prey_gene_options.vision_max,
-            )
+            appetite=random.uniform(0, 1),
+            fertility=random.uniform(0, 1),
+            charisma=random.uniform(0, 1),
+            vision=random.uniform(0, 1),
+            reproductive_urge_quickness=random.uniform(0, 1)
         )
 
         prey = Prey(
+            id=PreyId.new_random(),
+            mind_state=PreyIdleState(),
             genes=prey_genes,
             position=prey_position,
-            hunger=simulation_options.prey_spawn_options.initial_hunger,
-            energy=simulation_options.prey_spawn_options.initial_energy,
+            satiation=simulation_options.prey_initial_satiation_on_spawn,
+            reproductive_urge=simulation_options.prey_initial_reproductive_urge_on_spawn
         )
 
         initial_prey.append(prey)
 
 
+    initial_food_items: list[Food] = []
+
+    for _ in range(simulation_options.initial_number_of_food_items):
+        food = Food(
+            position=generate_random_position_in_world(
+                simulation_options.world_width,
+                simulation_options.world_height
+            )
+        )
+
+        initial_food_items.append(food)
+
+
     return SimulationState(
         predators=initial_predators,
-        prey=initial_prey
+        prey=initial_prey,
+        food=initial_food_items
     )
+
+
+class DraftSimulationState:
+    predators: list[Predator]
+    prey: list[Prey]
+    food: list[Food]
+
+    def __init__(self):
+        self.predators = []
+        self.prey = []
+        self.food = []
+
+    def add_predator(self, predator: Predator):
+        self.predators.append(predator)
+
+    def add_prey(self, prey: Prey):
+        self.prey.append(prey)
+
+    def add_food_item(self, food_item: Food):
+        self.food.append(food_item)
+
+    def into_final_simulation_state(self) -> SimulationState:
+        return SimulationState(
+            predators=self.predators,
+            prey=self.prey,
+            food=self.food
+        )
 
 
 def _run_simulation_for_one_tick(state: SimulationState) -> SimulationState:
@@ -105,22 +124,40 @@ def _run_simulation_for_one_tick(state: SimulationState) -> SimulationState:
     Will perform a single simulation tick. Because we want to track changes,
     **THIS FUNCTION MUST NOT MUTATE `state`**!
     """
+    draft_state = DraftSimulationState()
 
-    # TODO a single simulation tick
+    for predator in state.predators:
+        # TODO
+        raise NotImplementedError()
 
+    for prey in state.prey:
+        # TODO
+        raise NotImplementedError()
+
+    # TODO spawn some food based on the spawning rate
+    
+    # TODO a single simulation tick (see TODOs above).
     raise NotImplementedError()
 
 
 class EcosystemSimulator(SimulatorBackend):
     _options: SimulatorOptions
-    _state: SimulationState
+    _current_tick_number: int
+    _current_state: SimulationState
 
     def __init__(self, options_: SimulatorOptions):
         self._options = options_
-        self._state = _prepare_initial_simulation_state(self._options)
+        self._current_tick_number = 0
+        self._current_state = _prepare_initial_simulation_state(self._options)
 
-    def get_simulation_results(self) -> list[SimulationState]:
-        # TODO this comes from the SimulationBackend abstract base class and
-        #  just has to run the simulation for some number of ticks
-        #  (supposedly until the environment collapses or some other max number of ticks)
-        raise NotImplementedError()
+    def next_simulation_tick(self) -> SimulatedTick:
+        next_state = _run_simulation_for_one_tick(self._current_state)
+        next_tick_number = self._current_tick_number + 1
+
+        self._current_state = next_state
+        self._current_tick_number = next_tick_number
+
+        return SimulatedTick(
+            tick_number=next_tick_number,
+            state=next_state
+        )

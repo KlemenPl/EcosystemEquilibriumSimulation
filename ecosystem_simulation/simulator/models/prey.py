@@ -1,0 +1,134 @@
+import random
+from abc import ABCMeta
+from dataclasses import dataclass
+from typing import Optional
+
+from . import WorldPosition
+
+
+@dataclass(slots=True, frozen=True)
+class PreyId:
+    id: int
+
+    @classmethod
+    def new_random(cls) -> "PreyId":
+        return cls(id=random.randint(0, 2**16))
+
+
+@dataclass(slots=True)
+class PreyGenes:
+    # This gene controls how quickly a prey will start to look
+    # for food again after eating.
+    appetite: float
+
+    # This gene controls how many children a single specimen will carry.
+    # Upon birthing, a value between 0 and the value of this gene is uniformly sampled
+    # and multiplied with the `prey_max_children_per_birth` simulation option.
+    fertility: float
+
+    # This gene controls how attractive this specimen is when attempting to reproduce.
+    charisma: float
+
+    # This gene controls how far the specimen can see. To obtain the number
+    # of grid blocks of vision, this value is multiplied with the `max_vision_distance`
+    # simulation option.
+    vision: float
+
+    # This gene controls how quickly the `reproductive_urge` value
+    # rises for a given specimen.
+    reproductive_urge_quickness: float
+
+
+@dataclass(slots=True)
+class Prey:
+    # A persistent ID for this prey.
+    id: PreyId
+
+    # Current mind state (idling, eating, ...).
+    mind_state: "PreyMindState"
+
+    # Static genes of this prey. Will be mixed in when mating.
+    genes: PreyGenes
+
+    # Current position of this prey.
+    position: WorldPosition
+
+    # Current satiation (opposite of hunger) of this prey (non-negative float).
+    # When this value reaches 0, the prey dies.
+    satiation: float
+
+    # Current reproductive urge of this prey (non-negative float).
+    # The larger the value, the more likely it is the prey
+    # will enter its mating state.
+    reproductive_urge: float
+
+
+# The following describes one of multiple possible prey states akin to a
+# finite state machine. The prey can only decide to pursue one goal at once.
+# All possible FSM states are implementations of `PreyMindState`.
+
+class PreyMindState(metaclass=ABCMeta):
+    pass
+
+
+@dataclass(slots=True)
+class PreyIdleState(PreyMindState):
+    """
+    In its (rather rare) idle state, the prey wanders idly
+    in a random direction (up, right, down, or left).
+
+    When ticking a prey in its idle state, the logic is as follows:
+      - If the value of the `appetite` gene is larger than the prey's `satiation` value:
+          The prey enters its food search state (see `PreyFoodSearchState`).
+      - Otherwise, uniformly sample the random value between 0 and 1.
+        If the value is smaller than the prey's `reproductive_urge`:
+          The prey enters its reproduction state (see `PreyReproductionState`).
+    """
+
+@dataclass(slots=True)
+class PreyReproductionState(PreyMindState):
+    """
+    In its reproduction-seeking state, the prey - based on its vision - searches
+    around for nearby prey to mate with. When it finds one, it attempts to
+    signal the intention to it. Success is determined by a random roll based on
+    its charisma gene.
+
+    If denied by the partner: the partner cannot be mated with this time.
+    If accepted by the partner: `found_mate` is set, and both prey move towards
+    each other and mate.
+    """
+
+    # `None` indicates the prey is searching for nearby mates.
+    # A value indicates moving towards the found mate for reproduction.
+    found_mate: Optional[PreyId]
+
+    # Contains a list of all potential mates who have denied
+    # mating with this prey. This is reset upon mating once.
+    denied_by: list[PreyId]
+
+
+@dataclass(slots=True)
+class PreyPregnantState(PreyMindState):
+    """
+    After reproduction is complete (see `PredatorReproductionState`), one of
+    the prey specimens becomes pregnant.
+
+    It stands still until it births another prey (as specified by `ticks_until_birth`,
+    which decrements each tick until birth).
+    """
+    ticks_until_birth: int
+
+@dataclass(slots=True)
+class PreyFoodSearchState(PreyMindState):
+    """
+    In its food search state, the prey - based on its vision gene - searches
+    around for available food. It stays in this state until it finds one.
+
+    When it does, it "selects" it (by setting the `found_food_tile`). On subsequent
+    ticks, it moves towards it, finally eating the food if it is still on that tile.
+    Eating gives it some energy.
+    """
+
+    # `None` indicates the predator is searching for nearest food.
+    # A value indicates moving towards the found food tile position.
+    found_food_tile: Optional[WorldPosition]
