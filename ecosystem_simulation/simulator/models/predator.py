@@ -1,14 +1,17 @@
 import random
 from abc import ABCMeta
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
-from . import WorldPosition
-from .prey import PreyId
+from .abc import EntityId
+
+if TYPE_CHECKING:
+    from .world import WorldPosition
+    from .prey import PreyId
 
 
 @dataclass(slots=True, frozen=True)
-class PredatorId:
+class PredatorId(EntityId):
     id: int
 
     @classmethod
@@ -43,16 +46,16 @@ class PredatorGenes:
 @dataclass(slots=True)
 class Predator:
     # A persistent ID for this predator.
-    id: PredatorId
+    id: "PredatorId"
 
     # Current mind state (idling, hunting, ...).
     mind_state: "PredatorMindState"
 
     # Static genes of this predator. Will be mixed in when mating.
-    genes: PredatorGenes
+    genes: "PredatorGenes"
 
     # Current position of the predator.
-    position: WorldPosition
+    position: "WorldPosition"
 
     # Current satiation (opposite of hunger) of this predator (non-negative float).
     # When this value reaches 0, the predator dies.
@@ -102,7 +105,7 @@ class PredatorReproductionState(PredatorMindState):
     Uniformly sample a value between 0 and 1. If the value is smaller than our `charisma`,
     the call succeeds - the target predator also enters the reproduction state and
     the `found_mate` values are set to refer to each other. In subsequent ticks, the
-    predators shall move towards each other until they collide.
+    predator shall move towards it other until they collide.
 
     When they do, reproduction is performed. Pick a random of the two predators
     and assign it the pregnant state. The other is assigned the idle state.
@@ -110,11 +113,11 @@ class PredatorReproductionState(PredatorMindState):
 
     # `None` indicates the predator is searching for nearby mates.
     # A value indicates moving towards the found mate for reproduction.
-    found_mate: Optional[PredatorId]
+    found_mate_id: Optional["PredatorId"]
 
     # Contains a list of all potential mates who have denied
     # mating with this predator. This is reset upon mating once.
-    denied_by: list[PredatorId]
+    denied_by: list["PredatorId"]
 
 @dataclass(slots=True)
 class PredatorPregnantState(PredatorMindState):
@@ -126,6 +129,8 @@ class PredatorPregnantState(PredatorMindState):
     which decrements each tick until birth).
     """
     ticks_until_birth: int
+
+    other_parent_genes: "PredatorGenes"
 
 @dataclass(slots=True)
 class PredatorHuntingState(PredatorMindState):
@@ -142,4 +147,4 @@ class PredatorHuntingState(PredatorMindState):
 
     # `None` indicates the predator is searching for nearby prey.
     # A value indicates moving towards the prey in order to eat it.
-    found_prey: Optional[PreyId]
+    found_prey_id: Optional["PreyId"]

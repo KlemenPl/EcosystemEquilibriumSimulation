@@ -2,7 +2,53 @@ from dataclasses import dataclass
 
 
 @dataclass(slots=True, frozen=True)
-class SimulatorOptions:
+class PredatorSimulationOptions:
+    # The number of predators to spawn when initializing the simulation grid.
+    initial_number: int
+
+    # Satiation value of initially spawned or newly born predators.
+    initial_satiation_on_spawn: float
+
+    # Reproductive urge value of initially spawned or newly born predators.
+    initial_reproductive_urge_on_spawn: float
+
+    pregnancy_duration_in_ticks: int
+
+    # The maximum number of children a single predator specimen can birth at once.
+    max_children_per_birth: int
+
+    # How much satiation a specimen gains by eating one prey.
+    satiation_per_one_eaten_prey: float
+
+    satiation_loss_per_tick: float
+
+
+@dataclass(slots=True, frozen=True)
+class PreySimulationOptions:
+    # The number of prey to spawn when initializing the simulation grid.
+    initial_number: int
+
+    # Satiation value of initially spawned or newly born prey.
+    initial_satiation_on_spawn: float
+
+    pregnancy_duration_in_ticks: int
+
+    # Reproductive urge value of initially spawned or newly born prey.
+    initial_reproductive_urge_on_spawn: float
+
+    # How much satiation a specimen gains by eating one food item.
+    satiation_per_food_item: float
+
+    # The maximum number of children a single prey specimen can birth at once.
+    max_children_per_birth: int
+
+    satiation_loss_per_tick: float
+
+
+@dataclass(slots=True, frozen=True)
+class SimulationOptions:
+    randomness_seed: int
+
     # This means the x position values will go from `0` to `world_width` (exclusive).
     world_width: int
 
@@ -12,27 +58,6 @@ class SimulatorOptions:
     # The maximum distance the vision gene can improve a predator or prey's vision,
     # measured in a grid radius.
     max_vision_distance: int
-
-    initial_number_of_predators: int
-
-    predator_initial_satiation_on_spawn: float
-
-    predator_initial_reproductive_urge_on_spawn: float
-
-    # The maximum number of children a single predator specimen can birth at once.
-    predator_max_children_per_birth: int
-
-    initial_number_of_prey: int
-
-    prey_initial_satiation_on_spawn: float
-
-    prey_initial_reproductive_urge_on_spawn: float
-
-    # How much satiation a specimen gains by eating one food item.
-    prey_satiation_per_food_item: float
-
-    # The maximum number of children a single prey specimen can birth at once.
-    prey_max_children_per_birth: int
 
     # A range between 0 and 1, 1 being a guaranteed mutation when mating.
     child_gene_mutation_chance_when_mating: float
@@ -45,10 +70,8 @@ class SimulatorOptions:
     initial_number_of_food_items: int
 
     # The spawning rate of food items per second.
-    #
-    # The inter-arrival times for food items will be calculated using
-    # an approximation of the Poisson distribution (see https://en.wikipedia.org/wiki/Poisson_distribution):
-    #
-    # t_i = (-1.0 / spawning rate) * log(1 - "uniformly sampled 0 to 1 value")
-    #
-    food_item_spawning_rate_per_second: float
+    food_item_spawning_rate_per_tick: float
+
+    predator: PredatorSimulationOptions
+
+    prey: PreySimulationOptions

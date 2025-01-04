@@ -1,13 +1,17 @@
 import random
 from abc import ABCMeta
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
-from . import WorldPosition
+from .abc import EntityId
+
+if TYPE_CHECKING:
+    from .world import WorldPosition
+    from .food import FoodId
 
 
 @dataclass(slots=True, frozen=True)
-class PreyId:
+class PreyId(EntityId):
     id: int
 
     @classmethod
@@ -42,16 +46,16 @@ class PreyGenes:
 @dataclass(slots=True)
 class Prey:
     # A persistent ID for this prey.
-    id: PreyId
+    id: "PreyId"
 
     # Current mind state (idling, eating, ...).
     mind_state: "PreyMindState"
 
     # Static genes of this prey. Will be mixed in when mating.
-    genes: PreyGenes
+    genes: "PreyGenes"
 
     # Current position of this prey.
-    position: WorldPosition
+    position: "WorldPosition"
 
     # Current satiation (opposite of hunger) of this prey (non-negative float).
     # When this value reaches 0, the prey dies.
@@ -100,11 +104,11 @@ class PreyReproductionState(PreyMindState):
 
     # `None` indicates the prey is searching for nearby mates.
     # A value indicates moving towards the found mate for reproduction.
-    found_mate: Optional[PreyId]
+    found_mate_id: Optional["PreyId"]
 
     # Contains a list of all potential mates who have denied
     # mating with this prey. This is reset upon mating once.
-    denied_by: list[PreyId]
+    denied_by: list["PreyId"]
 
 
 @dataclass(slots=True)
@@ -117,6 +121,8 @@ class PreyPregnantState(PreyMindState):
     which decrements each tick until birth).
     """
     ticks_until_birth: int
+
+    other_parent_genes: "PreyGenes"
 
 @dataclass(slots=True)
 class PreyFoodSearchState(PreyMindState):
@@ -131,4 +137,4 @@ class PreyFoodSearchState(PreyMindState):
 
     # `None` indicates the predator is searching for nearest food.
     # A value indicates moving towards the found food tile position.
-    found_food_tile: Optional[WorldPosition]
+    found_food_tile_id: Optional["FoodId"]

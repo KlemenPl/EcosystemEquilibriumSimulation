@@ -1,14 +1,15 @@
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
-from . import SimulationState
+if TYPE_CHECKING:
+    from . import SimulationState
 
 
 @dataclass(slots=True, frozen=True)
 class SimulatedTick:
     tick_number: int
-    state: SimulationState
+    state: "SimulationState"
 
 
 class SimulatorBackend(metaclass=ABCMeta):
