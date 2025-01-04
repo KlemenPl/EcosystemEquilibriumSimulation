@@ -8,32 +8,32 @@ from ..utilities import clamp
 from ..models import WorldPosition, SimulationState, Prey, Predator, PredatorId, PredatorGenes
 from ..options import SimulationOptions
 from ..models.predator import PredatorMindState, PredatorHuntingState, PredatorReproductionState, PredatorPregnantState, PredatorIdleState
-from .shared import _move_towards, _move_in_random_direction, _mix_and_mutate_gene
+from .shared import move_towards, move_in_random_direction, mix_and_mutate_gene, iter_nearby_visible_positions
 
 
 def _find_closest_prey_for_predator(
     from_position: WorldPosition,
-    current_world_state: SimulationState,
+    world: SimulationState,
     vision_gene_value: float,
-    max_vision_distance: int
+    max_vision_distance: int,
+    world_width: int,
+    world_height: int,
 ) -> Optional[Prey]:
     predator_vision_in_grid_tiles: int = int(math.floor(vision_gene_value * max_vision_distance))
 
-    closest_visible_prey: Optional[Prey] = None
-    closest_visible_prey_distance: Optional[float] = None
+    for nearby_visible_position in iter_nearby_visible_positions(
+        from_position,
+        predator_vision_in_grid_tiles,
+        world_width,
+        world_height
+    ):
+        position_as_tuple = nearby_visible_position.to_tuple()
+        if position_as_tuple not in world.prey_by_position:
+            continue
 
-    for prey in current_world_state.prey():
-        distance_to_prey = from_position.distance_from(prey.position)
+        return world.prey_by_position[position_as_tuple]
 
-        if predator_vision_in_grid_tiles >= distance_to_prey:
-            if closest_visible_prey_distance is None:
-                closest_visible_prey = prey
-                closest_visible_prey_distance = distance_to_prey
-            elif distance_to_prey < closest_visible_prey_distance:
-                closest_visible_prey = prey
-                closest_visible_prey_distance = distance_to_prey
-
-    return closest_visible_prey
+    return None
 
 
 
@@ -46,42 +46,46 @@ class PredatorMatingCallResult:
 
 def _find_and_call_out_to_closest_available_predator_for_mating(
     from_position: WorldPosition,
-    current_world_state: SimulationState,
+    world: SimulationState,
     so_far_denied_by: list[PredatorId],
     vision_gene_value: float,
+    charisma_gene_value: float,
     max_vision_distance: int,
-    charisma_gene_value: float
+    world_width: int,
+    world_height: int,
 ) -> PredatorMatingCallResult:
     predator_vision_in_grid_tiles: int = int(math.floor(vision_gene_value * max_vision_distance))
 
-    closest_visible_available_predator: Optional[Predator] = None
-    closest_visible_available_predator_distance: Optional[float] = None
-
-    for predator in current_world_state.predators():
-        if predator.id in so_far_denied_by:
+    for nearby_visible_position in iter_nearby_visible_positions(
+        from_position,
+        predator_vision_in_grid_tiles,
+        world_width,
+        world_height
+    ):
+        position_as_tuple = nearby_visible_position.to_tuple()
+        if position_as_tuple not in world.predator_by_position:
             continue
 
-        distance_to_predator = from_position.distance_from(predator.position)
+        nearby_predator = world.predator_by_position[position_as_tuple]
+        if nearby_predator.id in so_far_denied_by:
+            continue
 
-        if predator_vision_in_grid_tiles >= distance_to_predator:
-            if closest_visible_available_predator_distance is None:
-                closest_visible_available_predator = predator
-                closest_visible_available_predator_distance = distance_to_predator
-            elif distance_to_predator < closest_visible_available_predator_distance:
-                closest_visible_available_predator = predator
-                closest_visible_available_predator_distance = distance_to_predator
+        # Roll the charisma.
+        if random.uniform(0, 1) < charisma_gene_value:
+            return PredatorMatingCallResult(
+                found_mate=nearby_predator,
+                newly_denied_by=None
+            )
+        else:
+            return PredatorMatingCallResult(
+                found_mate=None,
+                newly_denied_by=nearby_predator
+            )
 
-    # Roll the charisma.
-    if random.uniform(0, 1) < charisma_gene_value:
-        return PredatorMatingCallResult(
-            found_mate=closest_visible_available_predator,
-            newly_denied_by=None
-        )
-    else:
-        return PredatorMatingCallResult(
-            found_mate=None,
-            newly_denied_by=closest_visible_available_predator
-        )
+    return PredatorMatingCallResult(
+        found_mate=None,
+        newly_denied_by=None
+    )
 
 
 
@@ -133,12 +137,14 @@ def tick_predator(
                 predator.position,
                 world,
                 predator.genes.vision,
-                simulation_options.max_vision_distance
+                simulation_options.max_vision_distance,
+                simulation_options.world_width,
+                simulation_options.world_height
             )
 
             next_position: WorldPosition
             if closest_prey is not None:
-                next_position = _move_towards(predator.position, closest_prey.position)
+                next_position = move_towards(predator.position, closest_prey.position)
 
                 return PredatorTickChanges(
                     new_satiation=next_satiation,
@@ -147,7 +153,7 @@ def tick_predator(
                     new_mind_state=PredatorHuntingState(found_prey_id=closest_prey.id)
                 )
             else:
-                next_position = _move_in_random_direction(predator.position, simulation_options)
+                next_position = move_in_random_direction(predator.position, simulation_options)
 
                 return PredatorTickChanges(
                     new_satiation=next_satiation,
@@ -163,8 +169,10 @@ def tick_predator(
                 world,
                 [],
                 predator.genes.vision,
+                predator.genes.charisma,
                 simulation_options.max_vision_distance,
-                predator.genes.charisma
+                simulation_options.world_width,
+                simulation_options.world_height
             )
 
             denied_by: list[PredatorId] = []
@@ -172,7 +180,7 @@ def tick_predator(
                 denied_by.append(mating_call_result.newly_denied_by.id)
 
             if mating_call_result.found_mate is not None:
-                next_position = _move_towards(predator.position, mating_call_result.found_mate.position)
+                next_position = move_towards(predator.position, mating_call_result.found_mate.position)
 
                 return PredatorTickChanges(
                     new_satiation=next_satiation,
@@ -184,7 +192,7 @@ def tick_predator(
                     )
                 )
             else:
-                next_position = _move_in_random_direction(predator.position, simulation_options)
+                next_position = move_in_random_direction(predator.position, simulation_options)
 
                 return PredatorTickChanges(
                     new_satiation=next_satiation,
@@ -199,7 +207,7 @@ def tick_predator(
         # If the predator is neither hungry nor willing to mate,
         # it persists its idle state and moves in a random direction.
 
-        next_position = _move_in_random_direction(
+        next_position = move_in_random_direction(
             predator.position,
             simulation_options
         )
@@ -218,11 +226,13 @@ def tick_predator(
                 predator.position,
                 world,
                 predator.genes.vision,
-                simulation_options.max_vision_distance
+                simulation_options.max_vision_distance,
+                simulation_options.world_width,
+                simulation_options.world_height
             )
 
             if closest_prey is not None:
-                next_position = _move_towards(predator.position, closest_prey.position)
+                next_position = move_towards(predator.position, closest_prey.position)
 
                 return PredatorTickChanges(
                     new_satiation=next_satiation,
@@ -231,7 +241,7 @@ def tick_predator(
                     new_mind_state=PredatorHuntingState(found_prey_id=closest_prey.id)
                 )
             else:
-                next_position = _move_in_random_direction(predator.position, simulation_options)
+                next_position = move_in_random_direction(predator.position, simulation_options)
 
                 return PredatorTickChanges(
                     new_satiation=next_satiation,
@@ -260,7 +270,7 @@ def tick_predator(
                 new_mind_state=PredatorIdleState()
             )
 
-        next_position = _move_towards(predator.position, found_prey.position)
+        next_position = move_towards(predator.position, found_prey.position)
         return PredatorTickChanges(
             new_satiation=next_satiation,
             new_reproductive_urge=next_reproductive_urge,
@@ -281,8 +291,10 @@ def tick_predator(
                 world,
                 predator.mind_state.denied_by,
                 predator.genes.vision,
+                predator.genes.charisma,
                 simulation_options.max_vision_distance,
-                predator.genes.charisma
+                simulation_options.world_width,
+                simulation_options.world_height
             )
 
             denied_by = list.copy(predator.mind_state.denied_by)
@@ -290,7 +302,7 @@ def tick_predator(
                 denied_by.append(mating_call_result.newly_denied_by.id)
 
             if mating_call_result.found_mate is not None:
-                next_position = _move_towards(predator.position, mating_call_result.found_mate.position)
+                next_position = move_towards(predator.position, mating_call_result.found_mate.position)
 
                 return PredatorTickChanges(
                     new_satiation=next_satiation,
@@ -302,7 +314,7 @@ def tick_predator(
                     )
                 )
             else:
-                next_position = _move_in_random_direction(predator.position, simulation_options)
+                next_position = move_in_random_direction(predator.position, simulation_options)
 
                 return PredatorTickChanges(
                     new_satiation=next_satiation,
@@ -328,7 +340,7 @@ def tick_predator(
                 )
             )
 
-        next_position = _move_towards(
+        next_position = move_towards(
             predator.position,
             target_mate.position
         )
@@ -347,31 +359,31 @@ def tick_predator(
             children: list[Predator] = []
             for _ in range(number_of_children):
                 new_child_genes = PredatorGenes(
-                    aggression=_mix_and_mutate_gene(
+                    aggression=mix_and_mutate_gene(
                         predator.genes.aggression,
                         predator.mind_state.other_parent_genes.aggression,
                         simulation_options.child_gene_mutation_chance_when_mating,
                         simulation_options.child_gene_mutation_magnitude_when_mating,
                     ),
-                    fertility=_mix_and_mutate_gene(
+                    fertility=mix_and_mutate_gene(
                         predator.genes.fertility,
                         predator.mind_state.other_parent_genes.fertility,
                         simulation_options.child_gene_mutation_chance_when_mating,
                         simulation_options.child_gene_mutation_magnitude_when_mating,
                     ),
-                    charisma=_mix_and_mutate_gene(
+                    charisma=mix_and_mutate_gene(
                         predator.genes.charisma,
                         predator.mind_state.other_parent_genes.charisma,
                         simulation_options.child_gene_mutation_chance_when_mating,
                         simulation_options.child_gene_mutation_magnitude_when_mating,
                     ),
-                    vision=_mix_and_mutate_gene(
+                    vision=mix_and_mutate_gene(
                         predator.genes.vision,
                         predator.mind_state.other_parent_genes.vision,
                         simulation_options.child_gene_mutation_chance_when_mating,
                         simulation_options.child_gene_mutation_magnitude_when_mating,
                     ),
-                    reproductive_urge_quickness=_mix_and_mutate_gene(
+                    reproductive_urge_quickness=mix_and_mutate_gene(
                         predator.genes.reproductive_urge_quickness,
                         predator.mind_state.other_parent_genes.reproductive_urge_quickness,
                         simulation_options.child_gene_mutation_chance_when_mating,
@@ -397,7 +409,7 @@ def tick_predator(
             )
 
 
-        next_position = _move_in_random_direction(
+        next_position = move_in_random_direction(
             predator.position,
             simulation_options
         )

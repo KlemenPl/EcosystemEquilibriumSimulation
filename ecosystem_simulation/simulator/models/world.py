@@ -31,7 +31,9 @@ class SimulationState:
     prey_by_id: dict["PreyId", "Prey"]
     food_by_id: dict["FoodId", "Food"]
 
-    entity_id_by_position: dict[tuple[int, int], "EntityId"]
+    predator_by_position: dict[tuple[int, int], "Predator"]
+    prey_by_position: dict[tuple[int, int], "Prey"]
+    food_by_position: dict[tuple[int, int], "Food"]
 
     food_spawning_accumulator: float
 

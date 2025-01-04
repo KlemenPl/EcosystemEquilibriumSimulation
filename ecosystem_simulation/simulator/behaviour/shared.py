@@ -1,11 +1,30 @@
 import random
-from typing import Optional
+from typing import Optional, Generator
 
 from ..models.world import WorldPosition
 from ..options import SimulationOptions
 
 
-def _move_in_random_direction(
+def iter_nearby_visible_positions(
+    center_position: WorldPosition,
+    maximum_distance_in_grid_cells: int,
+    world_width: int,
+    world_height: int,
+) -> Generator[WorldPosition, None, None]:
+    for horizontal_offset in range(-maximum_distance_in_grid_cells, maximum_distance_in_grid_cells + 1):
+        for vertical_offset in range(-maximum_distance_in_grid_cells, maximum_distance_in_grid_cells + 1):
+            generated_x = center_position.x + horizontal_offset
+            if generated_x < 0 or generated_x >= world_width:
+                continue
+
+            generated_y = center_position.y + vertical_offset
+            if generated_y < 0 or generated_y >= world_height:
+                continue
+
+            yield WorldPosition(x=generated_x, y=generated_y)
+
+
+def move_in_random_direction(
     from_position: WorldPosition,
     simulation_options: SimulationOptions
 ) -> WorldPosition:
@@ -52,7 +71,7 @@ def _move_in_random_direction(
         )
 
 
-def _move_towards(
+def move_towards(
     current_position: WorldPosition,
     target_position: WorldPosition,
 ) -> WorldPosition:
@@ -113,7 +132,7 @@ def _move_towards(
             )
 
 
-def _move_away_from(
+def move_away_from(
     current_position: WorldPosition,
     target_position: WorldPosition,
     simulation_options: SimulationOptions
@@ -226,7 +245,7 @@ def _move_away_from(
 
 
 
-def _mix_and_mutate_gene(
+def mix_and_mutate_gene(
     first_parent_gene_value: float,
     second_parent_gene_value: float,
     mutation_chance: float,

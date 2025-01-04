@@ -1,5 +1,5 @@
 import random
-
+from typing import Optional
 
 from .abc import SimulatorBackend, SimulatedTick
 from .options import SimulationOptions
@@ -11,12 +11,77 @@ from .utilities import generate_random_position_in_world
 from .behaviour import PreyTickChanges, PredatorTickChanges, tick_prey, tick_predator
 
 
+class DraftSimulationState:
+    predator_by_id: dict[PredatorId, Predator]
+    prey_by_id: dict[PreyId, Prey]
+    food_by_id: dict[FoodId, Food]
+
+    predator_by_position: dict[tuple[int, int], "Predator"]
+    prey_by_position: dict[tuple[int, int], "Prey"]
+    food_by_position: dict[tuple[int, int], "Food"]
+
+    food_spawning_accumulator: float
+
+    def __init__(self):
+        self.predator_by_id = {}
+        self.prey_by_id = {}
+        self.food_by_id = {}
+
+        self.predator_by_position = {}
+        self.prey_by_position = {}
+        self.food_by_position = {}
+
+        self.food_spawning_accumulator = 0
+
+    def set_food_spawning_accumulator(self, value: float):
+        self.food_spawning_accumulator = value
+
+    def add_predator(self, predator: Predator):
+        self.predator_by_id[predator.id] = predator
+        self.predator_by_position[predator.position.to_tuple()] = predator
+
+    def add_prey(self, prey: Prey):
+        self.prey_by_id[prey.id] = prey
+        self.prey_by_position[prey.position.to_tuple()] = prey
+
+    def copy_over_food_from_previous_world(
+        self,
+        previous_world: SimulationState
+    ):
+        self.food_by_id = previous_world.food_by_id.copy()
+        self.food_by_position = previous_world.food_by_position.copy()
+
+    def remove_food_item(self, food_item_id: FoodId):
+        food_item: Optional[Food] = self.food_by_id.get(food_item_id)
+        if food_item is None:
+            return
+
+        del self.food_by_id[food_item_id]
+        del self.food_by_position[food_item.position.to_tuple()]
+
+    def add_food(self, food_item: Food):
+        self.food_by_id[food_item.id] = food_item
+        self.food_by_position[food_item.position.to_tuple()] = food_item
+
+    def into_final_simulation_state(self) -> SimulationState:
+        return SimulationState(
+            predator_by_id=self.predator_by_id,
+            prey_by_id=self.prey_by_id,
+            food_by_id=self.food_by_id,
+            predator_by_position=self.predator_by_position,
+            prey_by_position=self.prey_by_position,
+            food_by_position=self.food_by_position,
+            food_spawning_accumulator=self.food_spawning_accumulator
+        )
+
+
+
+
 def _prepare_initial_simulation_state(
     simulation_options: SimulationOptions
 ) -> SimulationState:
-    entity_id_by_position: dict[tuple[int, int], EntityId] = {}
-
-    initial_predators_by_id: dict[PredatorId, Predator] = {}
+    draft_state = DraftSimulationState()
+    draft_state.set_food_spawning_accumulator(0)
 
     for _ in range(simulation_options.predator.initial_number):
         # Spawn the predator at a random position in the world.
@@ -43,10 +108,8 @@ def _prepare_initial_simulation_state(
             reproductive_urge=simulation_options.predator.initial_reproductive_urge_on_spawn,
         )
 
-        initial_predators_by_id[predator.id] = predator
-        entity_id_by_position[predator_position.to_tuple()] = predator.id
+        draft_state.add_predator(predator)
 
-    initial_prey_by_id: dict[PreyId, Prey] = {}
 
     for _ in range(simulation_options.prey.initial_number):
         # Spawn the prey at a random position in the world.
@@ -73,10 +136,8 @@ def _prepare_initial_simulation_state(
             reproductive_urge=simulation_options.prey.initial_reproductive_urge_on_spawn
         )
 
-        initial_prey_by_id[prey.id] = prey
-        entity_id_by_position[prey_position.to_tuple()] = prey.id
+        draft_state.add_prey(prey)
 
-    initial_food_items_by_id: dict[FoodId, Food] = {}
 
     for _ in range(simulation_options.initial_number_of_food_items):
         food = Food(
@@ -87,62 +148,9 @@ def _prepare_initial_simulation_state(
             )
         )
 
-        initial_food_items_by_id[food.id] = food
-        entity_id_by_position[food.position.to_tuple()] = food.id
+        draft_state.add_food(food)
 
-    return SimulationState(
-        predator_by_id=initial_predators_by_id,
-        prey_by_id=initial_prey_by_id,
-        food_by_id=initial_food_items_by_id,
-        entity_id_by_position=entity_id_by_position,
-        food_spawning_accumulator=0
-    )
-
-
-class DraftSimulationState:
-    entity_id_by_position: dict[tuple[int, int], EntityId]
-    predator_by_id: dict[PredatorId, Predator]
-    prey_by_id: dict[PreyId, Prey]
-    food_by_id: dict[FoodId, Food]
-    food_spawning_accumulator: float
-
-    def __init__(self):
-        self.entity_id_by_position = {}
-        self.predator_by_id = {}
-        self.prey_by_id = {}
-        self.food_by_id = {}
-        self.food_spawning_accumulator = 0
-
-    def set_food_spawning_accumulator(self, value: float):
-        self.food_spawning_accumulator = value
-
-    def add_predator(self, predator: Predator):
-        self.predator_by_id[predator.id] = predator
-        self.entity_id_by_position[predator.position.to_tuple()] = predator.id
-
-    def add_prey(self, prey: Prey):
-        self.prey_by_id[prey.id] = prey
-        self.entity_id_by_position[prey.position.to_tuple()] = prey.id
-
-    def set_food_items(self, food_items: dict[FoodId, Food]):
-        self.food_by_id = food_items
-
-    def remove_food_item(self, food_item_id: FoodId):
-        del self.food_by_id[food_item_id]
-
-    def add_food_item(self, food_item: Food):
-        self.food_by_id[food_item.id] = food_item
-        self.entity_id_by_position[food_item.position.to_tuple()] = food_item.id
-
-    def into_final_simulation_state(self) -> SimulationState:
-        return SimulationState(
-            predator_by_id=self.predator_by_id,
-            prey_by_id=self.prey_by_id,
-            food_by_id=self.food_by_id,
-            entity_id_by_position=self.entity_id_by_position,
-            food_spawning_accumulator=self.food_spawning_accumulator
-        )
-
+    return draft_state.into_final_simulation_state()
 
 
 def _run_simulation_for_one_tick(
@@ -156,7 +164,7 @@ def _run_simulation_for_one_tick(
     draft_world = DraftSimulationState()
     eaten_prey_set: set[PreyId] = set()
 
-    draft_world.set_food_items(world.food_by_id)
+    draft_world.copy_over_food_from_previous_world(world)
 
     for predator in world.predators():
         predator_tick_result: PredatorTickChanges = tick_predator(
@@ -224,7 +232,7 @@ def _run_simulation_for_one_tick(
     new_food_spawning_accumulator = world.food_spawning_accumulator + simulation_options.food_item_spawning_rate_per_tick
 
     while new_food_spawning_accumulator >= 1.0:
-        draft_world.add_food_item(Food(
+        draft_world.add_food(Food(
             id=FoodId.new_random(),
             position=generate_random_position_in_world(
                 simulation_options.world_width,

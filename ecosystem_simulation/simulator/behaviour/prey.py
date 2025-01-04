@@ -8,32 +8,32 @@ from ..models import SimulationState, Food, Prey, PreyId, PreyGenes, WorldPositi
 from ..models.prey import PreyIdleState, PreyMindState, PreyFoodSearchState, PreyReproductionState, PreyPregnantState
 from ..options import SimulationOptions
 from ..utilities import clamp
-from .shared import _move_towards, _move_in_random_direction, _mix_and_mutate_gene
+from .shared import move_towards, move_in_random_direction, mix_and_mutate_gene, iter_nearby_visible_positions
 
 
 def _find_closest_food_for_prey(
     from_position: WorldPosition,
-    current_world_state: SimulationState,
+    world: SimulationState,
     vision_gene_value: float,
-    max_vision_distance: int
+    max_vision_distance: int,
+    world_width: int,
+    world_height: int,
 ) -> Optional[Food]:
     prey_vision_in_grid_tiles: int = int(math.floor(vision_gene_value * max_vision_distance))
 
-    closest_visible_food: Optional[Food] = None
-    closest_visible_food_distance: Optional[float] = None
+    for nearby_visible_position in iter_nearby_visible_positions(
+        from_position,
+        prey_vision_in_grid_tiles,
+        world_width,
+        world_height
+    ):
+        position_as_tuple = nearby_visible_position.to_tuple()
+        if position_as_tuple not in world.food_by_position:
+            continue
 
-    for food in current_world_state.food():
-        distance_to_food = from_position.distance_from(food.position)
+        return world.food_by_position[position_as_tuple]
 
-        if prey_vision_in_grid_tiles >= distance_to_food:
-            if closest_visible_food_distance is None:
-                closest_visible_food = food
-                closest_visible_food_distance = distance_to_food
-            elif distance_to_food < closest_visible_food_distance:
-                closest_visible_food = food
-                closest_visible_food_distance = distance_to_food
-
-    return closest_visible_food
+    return None
 
 
 
@@ -45,42 +45,47 @@ class PreyMatingCallResult:
 
 def _find_and_call_out_to_closest_available_prey_for_mating(
     from_position: WorldPosition,
-    current_world_state: SimulationState,
+    world: SimulationState,
     so_far_denied_by: list[PreyId],
     vision_gene_value: float,
+    charisma_gene_value: float,
     max_vision_distance: int,
-    charisma_gene_value: float
+    world_width: int,
+    world_height: int,
 ) -> PreyMatingCallResult:
     prey_vision_in_grid_tiles: int = int(math.floor(vision_gene_value * max_vision_distance))
 
-    closest_visible_available_prey: Optional[Prey] = None
-    closest_visible_available_prey_distance: Optional[float] = None
 
-    for prey in current_world_state.prey():
-        if prey.id in so_far_denied_by:
+    for nearby_visible_position in iter_nearby_visible_positions(
+        from_position,
+        prey_vision_in_grid_tiles,
+        world_width,
+        world_height
+    ):
+        position_as_tuple = nearby_visible_position.to_tuple()
+        if position_as_tuple not in world.prey_by_position:
             continue
 
-        distance_to_prey = from_position.distance_from(prey.position)
+        nearby_prey = world.prey_by_position[position_as_tuple]
+        if nearby_prey.id in so_far_denied_by:
+            continue
 
-        if prey_vision_in_grid_tiles >= distance_to_prey:
-            if closest_visible_available_prey_distance is None:
-                closest_visible_available_prey = prey
-                closest_visible_available_prey_distance = distance_to_prey
-            elif distance_to_prey < closest_visible_available_prey_distance:
-                closest_visible_available_prey = prey
-                closest_visible_available_prey_distance = distance_to_prey
+        # Roll the charisma.
+        if random.uniform(0, 1) < charisma_gene_value:
+            return PreyMatingCallResult(
+                found_mate=nearby_prey,
+                newly_denied_by=None
+            )
+        else:
+            return PreyMatingCallResult(
+                found_mate=None,
+                newly_denied_by=nearby_prey
+            )
 
-    # Roll the charisma.
-    if random.uniform(0, 1) < charisma_gene_value:
-        return PreyMatingCallResult(
-            found_mate=closest_visible_available_prey,
-            newly_denied_by=None
-        )
-    else:
-        return PreyMatingCallResult(
-            found_mate=None,
-            newly_denied_by=closest_visible_available_prey
-        )
+    return PreyMatingCallResult(
+        found_mate=None,
+        newly_denied_by=None
+    )
 
 
 
@@ -134,12 +139,14 @@ def tick_prey(
                 prey.position,
                 world,
                 prey.genes.vision,
-                simulation_options.max_vision_distance
+                simulation_options.max_vision_distance,
+                simulation_options.world_width,
+                simulation_options.world_height
             )
 
             next_position: WorldPosition
             if closest_visible_food is not None:
-                next_position = _move_towards(
+                next_position = move_towards(
                     prey.position,
                     closest_visible_food.position
                 )
@@ -153,7 +160,7 @@ def tick_prey(
                     )
                 )
             else:
-                next_position = _move_in_random_direction(
+                next_position = move_in_random_direction(
                     prey.position,
                     simulation_options
                 )
@@ -175,8 +182,10 @@ def tick_prey(
                 world,
                 [],
                 prey.genes.vision,
+                prey.genes.charisma,
                 simulation_options.max_vision_distance,
-                prey.genes.charisma
+                simulation_options.world_width,
+                simulation_options.world_height
             )
 
             denied_by = []
@@ -185,7 +194,7 @@ def tick_prey(
 
 
             if mating_call_result.found_mate is not None:
-                next_position = _move_towards(prey.position, mating_call_result.found_mate.position)
+                next_position = move_towards(prey.position, mating_call_result.found_mate.position)
 
                 return PreyTickChanges(
                     new_satiation=next_satiation,
@@ -197,7 +206,7 @@ def tick_prey(
                     )
                 )
             else:
-                next_position = _move_in_random_direction(prey.position, simulation_options)
+                next_position = move_in_random_direction(prey.position, simulation_options)
 
                 return PreyTickChanges(
                     new_satiation=next_satiation,
@@ -213,7 +222,7 @@ def tick_prey(
         # If the prey is neither hungry nor willing to mate,
         # it persists its idle state and moves in a random direction.
 
-        next_position = _move_in_random_direction(
+        next_position = move_in_random_direction(
             prey.position,
             simulation_options
         )
@@ -240,11 +249,13 @@ def tick_prey(
                 prey.position,
                 world,
                 prey.genes.vision,
-                simulation_options.max_vision_distance
+                simulation_options.max_vision_distance,
+                simulation_options.world_width,
+                simulation_options.world_height
             )
 
             if closest_visible_food is not None:
-                next_position = _move_towards(
+                next_position = move_towards(
                     prey.position,
                     closest_visible_food.position
                 )
@@ -258,7 +269,7 @@ def tick_prey(
                     )
                 )
             else:
-                next_position = _move_in_random_direction(
+                next_position = move_in_random_direction(
                     prey.position,
                     simulation_options
                 )
@@ -290,7 +301,7 @@ def tick_prey(
                 new_mind_state=PreyIdleState()
             )
 
-        next_position = _move_towards(prey.position, food_item.position)
+        next_position = move_towards(prey.position, food_item.position)
         return PreyTickChanges(
             new_satiation=next_satiation,
             new_reproductive_urge=next_reproductive_urge,
@@ -311,8 +322,10 @@ def tick_prey(
                 world,
                 prey.mind_state.denied_by,
                 prey.genes.vision,
+                prey.genes.charisma,
                 simulation_options.max_vision_distance,
-                prey.genes.charisma
+                simulation_options.world_width,
+                simulation_options.world_height
             )
 
             denied_by = list.copy(prey.mind_state.denied_by)
@@ -320,7 +333,7 @@ def tick_prey(
                 denied_by.append(mating_call_result.newly_denied_by.id)
 
             if mating_call_result.found_mate is not None:
-                next_position = _move_towards(prey.position, mating_call_result.found_mate.position)
+                next_position = move_towards(prey.position, mating_call_result.found_mate.position)
 
                 return PreyTickChanges(
                     new_satiation=next_satiation,
@@ -332,7 +345,7 @@ def tick_prey(
                     )
                 )
             else:
-                next_position = _move_in_random_direction(prey.position, simulation_options)
+                next_position = move_in_random_direction(prey.position, simulation_options)
 
                 return PreyTickChanges(
                     new_satiation=next_satiation,
@@ -357,7 +370,7 @@ def tick_prey(
                 )
             )
 
-        next_position = _move_towards(
+        next_position = move_towards(
             prey.position,
             target_mate.position
         )
@@ -376,31 +389,31 @@ def tick_prey(
             children: list[Prey] = []
             for _ in range(number_of_children):
                 new_child_genes = PreyGenes(
-                    appetite=_mix_and_mutate_gene(
+                    appetite=mix_and_mutate_gene(
                         prey.genes.appetite,
                         prey.mind_state.other_parent_genes.appetite,
                         simulation_options.child_gene_mutation_chance_when_mating,
                         simulation_options.child_gene_mutation_magnitude_when_mating,
                     ),
-                    fertility=_mix_and_mutate_gene(
+                    fertility=mix_and_mutate_gene(
                         prey.genes.fertility,
                         prey.mind_state.other_parent_genes.fertility,
                         simulation_options.child_gene_mutation_chance_when_mating,
                         simulation_options.child_gene_mutation_magnitude_when_mating,
                     ),
-                    charisma=_mix_and_mutate_gene(
+                    charisma=mix_and_mutate_gene(
                         prey.genes.charisma,
                         prey.mind_state.other_parent_genes.charisma,
                         simulation_options.child_gene_mutation_chance_when_mating,
                         simulation_options.child_gene_mutation_magnitude_when_mating,
                     ),
-                    vision=_mix_and_mutate_gene(
+                    vision=mix_and_mutate_gene(
                         prey.genes.vision,
                         prey.mind_state.other_parent_genes.vision,
                         simulation_options.child_gene_mutation_chance_when_mating,
                         simulation_options.child_gene_mutation_magnitude_when_mating,
                     ),
-                    reproductive_urge_quickness=_mix_and_mutate_gene(
+                    reproductive_urge_quickness=mix_and_mutate_gene(
                         prey.genes.reproductive_urge_quickness,
                         prey.mind_state.other_parent_genes.reproductive_urge_quickness,
                         simulation_options.child_gene_mutation_chance_when_mating,
@@ -425,7 +438,7 @@ def tick_prey(
                 new_mind_state=prey.mind_state
             )
 
-        next_position = _move_in_random_direction(
+        next_position = move_in_random_direction(
             prey.position,
             simulation_options
         )
