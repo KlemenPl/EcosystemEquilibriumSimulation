@@ -3,7 +3,6 @@ from dataclasses import dataclass
 from typing import Iterable, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .abc import EntityId
     from .predator import PredatorId, Predator
     from .prey import PreyId, Prey
     from .food import Food, FoodId
