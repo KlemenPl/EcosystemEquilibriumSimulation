@@ -80,18 +80,6 @@ def move_towards(
 
 
     if current_position.x == target_position.x:
-        # We only need to move left/right.
-        if current_position.x < target_position.x:
-            return WorldPosition(
-                x=current_position.x + 1,
-                y=current_position.y
-            )
-        else:
-            return WorldPosition(
-                x=current_position.x - 1,
-                y=current_position.y
-            )
-    elif current_position.y == target_position.y:
         # We only need to move up/down.
         if current_position.y < target_position.y:
             return WorldPosition(
@@ -102,6 +90,18 @@ def move_towards(
             return WorldPosition(
                 x=current_position.x,
                 y=current_position.y - 1
+            )
+    elif current_position.y == target_position.y:
+        # We only need to move left/right.
+        if current_position.x < target_position.x:
+            return WorldPosition(
+                x=current_position.x + 1,
+                y=current_position.y
+            )
+        else:
+            return WorldPosition(
+                x=current_position.x - 1,
+                y=current_position.y
             )
 
     # Otherwise we are on different axis for both x and y.
