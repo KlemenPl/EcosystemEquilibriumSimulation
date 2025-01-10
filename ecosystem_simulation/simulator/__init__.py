@@ -1,5 +1,5 @@
 import random
-from typing import Optional
+from typing import Callable, Optional
 
 from .abc import SimulatorBackend, SimulatedTick
 from .options import SimulationOptions
@@ -252,10 +252,12 @@ class EcosystemSimulator(SimulatorBackend):
     _options: SimulationOptions
     _current_tick_number: int
     _current_state: SimulationState
+    _on_tick: Optional[Callable[[SimulatedTick], None]]
 
     def __init__(self, options_: SimulationOptions):
         self._options = options_
         self._current_tick_number = 0
+        self._on_tick = None
 
         random.seed(self._options.randomness_seed)
 
@@ -267,6 +269,12 @@ class EcosystemSimulator(SimulatorBackend):
 
         self._current_state = next_state
         self._current_tick_number = next_tick_number
+
+        if self._on_tick is not None:
+            self._on_tick(SimulatedTick(
+                tick_number=next_tick_number,
+                state=next_state
+            ))
 
         return SimulatedTick(
             tick_number=next_tick_number,

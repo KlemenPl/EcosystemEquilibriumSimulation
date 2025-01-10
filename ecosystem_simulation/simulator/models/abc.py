@@ -1,4 +1,10 @@
-from abc import ABCMeta
+from abc import ABCMeta, abstractmethod
 
 class EntityId(metaclass=ABCMeta):
-    pass
+    @abstractmethod
+    def serialize(self):
+        return NotImplemented
+    
+    @abstractmethod
+    def deserialize(self, data):
+        return NotImplemented

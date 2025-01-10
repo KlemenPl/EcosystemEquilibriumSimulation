@@ -2,14 +2,22 @@ from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
 from typing import Optional, TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from . import SimulationState
+from .models.world import SimulationState
 
 
 @dataclass(slots=True, frozen=True)
 class SimulatedTick:
     tick_number: int
     state: "SimulationState"
+
+    def serialize(self) -> dict:
+        return {
+            "tick_number": self.tick_number,
+            "state": self.state.serialize(),
+        }
+
+    def deserialize(data: dict):
+        return SimulatedTick(tick_number=data["tick_number"], state=SimulationState.deserialize(data["state"]))
 
 
 class SimulatorBackend(metaclass=ABCMeta):

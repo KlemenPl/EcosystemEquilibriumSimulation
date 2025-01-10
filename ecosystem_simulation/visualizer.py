@@ -9,6 +9,7 @@ from PIL import Image
 
 from ecosystem_simulation.simulator import *
 from ecosystem_simulation.simulator.options import *
+from ecosystem_simulation.simulation_player import *
 
 BACKGROUND_COLOR = (200, 200, 200)
 GRID_COLOR = (160, 160, 160)
@@ -42,9 +43,9 @@ class Camera:
 class EcosystemVisualizer:
     CELL_SIZE = 10
 
-    def __init__(self, simulator: EcosystemSimulator):
+    def __init__(self, player: SimulationPlayer):
         pygame.init()
-        self.simulator = simulator
+        self.player = player
         self.screen_width = 1200
         self.screen_height = 800
         self.screen = pygame.display.set_mode((self.screen_width, self.screen_height))
@@ -58,12 +59,21 @@ class EcosystemVisualizer:
             manager=self.ui_manager
         )
 
+        if (player.mode == PlayerMode.FILE):
+            self.progress_slider = pygame_gui.elements.UIHorizontalSlider(
+                relative_rect=pygame.Rect((20, self.screen_height - 40), (self.screen_width - 40, 30)),
+                start_value=0.0,
+                value_range=(0.0, 1.0),
+                manager=self.ui_manager
+            )
+
         self.speed_slider = pygame_gui.elements.UIHorizontalSlider(
             relative_rect=pygame.Rect((120, 10), (200, 30)),
             start_value=1.0,
             value_range=(0.1, 5.0),
             manager=self.ui_manager
         )
+
 
         self.speed_label = pygame_gui.elements.UILabel(
             relative_rect=pygame.Rect((330, 10), (100, 30)),
@@ -82,7 +92,7 @@ class EcosystemVisualizer:
 
         self.font = pygame.font.Font(None, 36)
 
-        self.current_tick = self.simulator.next_simulation_tick()
+        self.current_tick = self.player.next_tick()
 
     def handle_events(self):
         for event in pygame.event.get():
@@ -119,6 +129,8 @@ class EcosystemVisualizer:
                 if event.ui_element == self.speed_slider:
                     self.simulation_speed = event.value
                     self.speed_label.set_text(f"Speed: {self.simulation_speed:.1f}x")
+                elif event.ui_element == self.progress_slider:
+                    self.player.tick = int(event.value * self.player.tick_count())
 
             self.ui_manager.process_events(event)
 
@@ -130,8 +142,8 @@ class EcosystemVisualizer:
         pygame.draw.rect(self.screen, color, pygame.Rect(screen_pos[0], screen_pos[1], cell_size * self.camera.zoom, cell_size * self.camera.zoom))
 
     def draw_grid(self):
-        world_width = self.simulator._options.world_width
-        world_height = self.simulator._options.world_height
+        world_width = self.player._options.world_width
+        world_height = self.player._options.world_height
         cell_size = self.CELL_SIZE
 
         # Draw vertical lines
@@ -182,7 +194,7 @@ class EcosystemVisualizer:
         if not self.paused:
             time_since_last_tick = current_time - self.last_tick_time
             if time_since_last_tick >= self.tick_interval / self.simulation_speed:
-                self.current_tick = self.simulator.next_simulation_tick()
+                self.current_tick = self.player.next_tick()
                 self.last_tick_time = current_time
 
         self.ui_manager.update(current_time - self.last_tick_time)

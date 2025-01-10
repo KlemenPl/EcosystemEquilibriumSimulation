@@ -22,6 +22,28 @@ class PredatorSimulationOptions:
 
     satiation_loss_per_tick: float
 
+    def serialize(self):
+        return {
+            "initial_number": self.initial_number,
+            "initial_satiation_on_spawn": self.initial_satiation_on_spawn,
+            "initial_reproductive_urge_on_spawn": self.initial_reproductive_urge_on_spawn,
+            "pregnancy_duration_in_ticks": self.pregnancy_duration_in_ticks,
+            "max_children_per_birth": self.max_children_per_birth,
+            "satiation_per_one_eaten_prey": self.satiation_per_one_eaten_prey,
+            "satiation_loss_per_tick": self.satiation_loss_per_tick
+        }
+    
+    def deserialize(data):
+        return PredatorSimulationOptions(
+            initial_number=data["initial_number"],
+            initial_satiation_on_spawn=data["initial_satiation_on_spawn"],
+            initial_reproductive_urge_on_spawn=data["initial_reproductive_urge_on_spawn"],
+            pregnancy_duration_in_ticks=data["pregnancy_duration_in_ticks"],
+            max_children_per_birth=data["max_children_per_birth"],
+            satiation_per_one_eaten_prey=data["satiation_per_one_eaten_prey"],
+            satiation_loss_per_tick=data["satiation_loss_per_tick"]
+        )
+
 
 @dataclass(slots=True, frozen=True)
 class PreySimulationOptions:
@@ -43,6 +65,30 @@ class PreySimulationOptions:
     max_children_per_birth: int
 
     satiation_loss_per_tick: float
+
+    def serialize(self):
+        return {
+            "initial_number": self.initial_number,
+            "initial_satiation_on_spawn": self.initial_satiation_on_spawn,
+            "pregnancy_duration_in_ticks": self.pregnancy_duration_in_ticks,
+            "initial_reproductive_urge_on_spawn": self.initial_reproductive_urge_on_spawn,
+            "satiation_per_food_item": self.satiation_per_food_item,
+            "max_children_per_birth": self.max_children_per_birth,
+            "satiation_loss_per_tick": self.satiation_loss_per_tick
+        }
+    
+    def deserialize(data):
+        return PreySimulationOptions(
+            initial_number=data["initial_number"],
+            initial_satiation_on_spawn=data["initial_satiation_on_spawn"],
+            pregnancy_duration_in_ticks=data["pregnancy_duration_in_ticks"],
+            initial_reproductive_urge_on_spawn=data["initial_reproductive_urge_on_spawn"],
+            satiation_per_food_item=data["satiation_per_food_item"],
+            max_children_per_birth=data["max_children_per_birth"],
+            satiation_loss_per_tick=data["satiation_loss_per_tick"]
+        )    
+
+        
 
 
 @dataclass(slots=True, frozen=True)
@@ -75,3 +121,31 @@ class SimulationOptions:
     predator: PredatorSimulationOptions
 
     prey: PreySimulationOptions
+
+    def serialize(self):
+        return {
+            "randomness_seed": self.randomness_seed,
+            "world_width": self.world_width,
+            "world_height": self.world_height,
+            "max_vision_distance": self.max_vision_distance,
+            "child_gene_mutation_chance_when_mating": self.child_gene_mutation_chance_when_mating,
+            "child_gene_mutation_magnitude_when_mating": self.child_gene_mutation_magnitude_when_mating,
+            "initial_number_of_food_items": self.initial_number_of_food_items,
+            "food_item_spawning_rate_per_tick": self.food_item_spawning_rate_per_tick,
+            "predator": self.predator.serialize(),
+            "prey": self.prey.serialize()
+        }
+        
+    def deserialize(data):
+        return SimulationOptions(
+            randomness_seed=data["randomness_seed"],
+            world_width=data["world_width"],
+            world_height=data["world_height"],
+            max_vision_distance=data["max_vision_distance"],
+            child_gene_mutation_chance_when_mating=data["child_gene_mutation_chance_when_mating"],
+            child_gene_mutation_magnitude_when_mating=data["child_gene_mutation_magnitude_when_mating"],
+            initial_number_of_food_items=data["initial_number_of_food_items"],
+            food_item_spawning_rate_per_tick=data["food_item_spawning_rate_per_tick"],
+            predator=PredatorSimulationOptions.deserialize(data["predator"]),
+            prey=PreySimulationOptions.deserialize(data["prey"])
+        )

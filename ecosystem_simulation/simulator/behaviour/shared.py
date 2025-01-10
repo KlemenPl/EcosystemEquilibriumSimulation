@@ -1,7 +1,7 @@
 import random
 from typing import Optional, Generator
 
-from ..models.world import WorldPosition
+from ..models.world_position import WorldPosition
 from ..options import SimulationOptions
 
 

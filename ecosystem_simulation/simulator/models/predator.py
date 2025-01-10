@@ -1,13 +1,12 @@
 import random
-from abc import ABCMeta
+from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
 from typing import Optional, TYPE_CHECKING
 
+from .world_position import WorldPosition
 from .abc import EntityId
 
-if TYPE_CHECKING:
-    from .world import WorldPosition
-    from .prey import PreyId
+from .prey import PreyId
 
 
 @dataclass(slots=True, frozen=True)
@@ -17,6 +16,12 @@ class PredatorId(EntityId):
     @classmethod
     def new_random(cls) -> "PredatorId":
         return cls(id=random.randint(0, 2**16))
+    
+    def serialize(self):
+        return self.id
+    
+    def deserialize(data):
+        return PredatorId(id=data)
 
 
 @dataclass(slots=True)
@@ -42,6 +47,24 @@ class PredatorGenes:
     # rises for a given specimen.
     reproductive_urge_quickness: float
 
+    def serialize(self):
+        return {
+            "aggression": self.aggression,
+            "fertility": self.fertility,
+            "charisma": self.charisma,
+            "vision": self.vision,
+            "reproductive_urge_quickness": self.reproductive_urge_quickness
+        }
+    
+    def deserialize(data):
+        return PredatorGenes(
+            aggression=data["aggression"],
+            fertility=data["fertility"],
+            charisma=data["charisma"],
+            vision=data["vision"],
+            reproductive_urge_quickness=data["reproductive_urge_quickness"]
+        )
+
 
 @dataclass(slots=True)
 class Predator:
@@ -66,6 +89,26 @@ class Predator:
     # will enter its mating state.
     reproductive_urge: float
 
+    def serialize(self):
+        return {
+            "id": self.id.serialize(),
+            "mind_state": self.mind_state.serialize(),
+            "genes": self.genes.serialize(),
+            "position": self.position.serialize(),
+            "satiation": self.satiation,
+            "reproductive_urge": self.reproductive_urge
+        }
+    
+    def deserialize(data):
+        return Predator(
+            id=PredatorId.deserialize(data["id"]),
+            mind_state=PredatorMindState.deserialize(data["mind_state"]),
+            genes=PredatorGenes.deserialize(data["genes"]),
+            position=WorldPosition.deserialize(data["position"]),
+            satiation=data["satiation"],
+            reproductive_urge=data["reproductive_urge"]
+        )
+
 
 
 # The following describes one of multiple possible predator states akin to a
@@ -73,9 +116,22 @@ class Predator:
 # All possible FSM states are implementations of `PredatorMindState`.
 
 class PredatorMindState(metaclass=ABCMeta):
-    pass
-
-
+    @abstractmethod
+    def serialize(self):
+        return NotImplemented
+    
+    def deserialize(data):
+        type = data["type"]
+        if type == "idle":
+            return PredatorIdleState.deserialize(data)
+        elif type == "reproduction":
+            return PredatorReproductionState.deserialize(data)
+        elif type == "pregnant":
+            return PredatorPregnantState.deserialize(data)
+        elif type == "hunting":
+            return PredatorHuntingState.deserialize(data)
+        else:
+            raise ValueError(f"Unknown predator mind state: {type}")
 
 @dataclass(slots=True)
 class PredatorIdleState(PredatorMindState):
@@ -90,6 +146,12 @@ class PredatorIdleState(PredatorMindState):
         If the value is smaller than the predator's `reproductive_urge`:
           The predator enters its reproduction state (see `PredatorReproductionState`).
     """
+
+    def serialize(self):
+        return {"type": "idle"}
+    
+    def deserialize(data):
+        return PredatorIdleState()
 
 @dataclass(slots=True)
 class PredatorReproductionState(PredatorMindState):
@@ -119,6 +181,19 @@ class PredatorReproductionState(PredatorMindState):
     # mating with this predator. This is reset upon mating once.
     denied_by: list["PredatorId"]
 
+    def serialize(self):
+        return {
+            "type": "reproduction",
+            "found_mate_id": self.found_mate_id.serialize() if self.found_mate_id != None else None,
+            "denied_by": [id.serialize() for id in self.denied_by if self.denied_by != None]
+            }
+    
+    def deserialize(data):
+        return PredatorReproductionState(
+            found_mate_id=PredatorId.deserialize(data["found_mate_id"]) if data["found_mate_id"] != None else None,
+            denied_by=[PredatorId.deserialize(id) for id in data["denied_by"]]
+        )
+
 @dataclass(slots=True)
 class PredatorPregnantState(PredatorMindState):
     """
@@ -131,6 +206,19 @@ class PredatorPregnantState(PredatorMindState):
     ticks_until_birth: int
 
     other_parent_genes: "PredatorGenes"
+
+    def serialize(self):
+        return {
+            "type": "pregnant",
+            "ticks_until_birth": self.ticks_until_birth,
+            "other_parent_genes": self.other_parent_genes.serialize()
+        }
+    
+    def deserialize(data):
+        return PredatorPregnantState(
+            ticks_until_birth=data["ticks_until_birth"],
+            other_parent_genes=PredatorGenes.deserialize(data["other_parent_genes"])
+        )
 
 @dataclass(slots=True)
 class PredatorHuntingState(PredatorMindState):
@@ -148,3 +236,21 @@ class PredatorHuntingState(PredatorMindState):
     # `None` indicates the predator is searching for nearby prey.
     # A value indicates moving towards the prey in order to eat it.
     found_prey_id: Optional["PreyId"]
+
+    def serialize(self):
+        if (self.found_prey_id == None):
+            return {
+                "type": "hunting",
+                "found_prey_id": ""
+            }
+        else:
+            return {
+                "type": "hunting",
+                "found_prey_id": self.found_prey_id.id
+            }
+                
+    def deserialize(data):
+        if (data["found_prey_id"] == ""):
+            return PredatorHuntingState(found_prey_id=None)
+        else:
+            return PredatorHuntingState(found_prey_id=PreyId.deserialize(data["found_prey_id"]))

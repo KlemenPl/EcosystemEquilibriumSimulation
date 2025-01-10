@@ -3,6 +3,7 @@ import time
 from ecosystem_simulation.simulator import EcosystemSimulator
 from ecosystem_simulation.simulator.options import PredatorSimulationOptions, SimulationOptions, PreySimulationOptions
 from ecosystem_simulation.visualizer import EcosystemVisualizer
+from ecosystem_simulation.simulation_player import *
 
 
 def main():
@@ -37,7 +38,8 @@ def main():
         )
     )
 
-    visualizer = EcosystemVisualizer(simulator=simulator)
+    player = SimulationPlayer(mode=PlayerMode.SIMULATOR, source=simulator)
+    visualizer = EcosystemVisualizer(player=player)
     visualizer.run()
 
 
