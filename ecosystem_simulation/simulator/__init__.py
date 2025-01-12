@@ -56,8 +56,10 @@ class DraftSimulationState:
         if food_item is None:
             return
 
-        del self.food_by_id[food_item_id]
-        del self.food_by_position[food_item.position.to_tuple()]
+        if food_item_id in self.food_by_id:
+            del self.food_by_id[food_item_id]
+        if food_item.position.to_tuple() in self.food_by_position:
+            del self.food_by_position[food_item.position.to_tuple()]
 
     def add_food(self, food_item: Food):
         self.food_by_id[food_item.id] = food_item
