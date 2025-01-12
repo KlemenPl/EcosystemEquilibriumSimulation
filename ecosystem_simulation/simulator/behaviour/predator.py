@@ -221,7 +221,7 @@ def tick_predator(
 
     elif isinstance(predator.mind_state, PredatorHuntingState):
         # If the predator hasn't been able to find any prey, it will try again this tick.
-        if predator.mind_state.found_prey_id is None:
+        if predator.mind_state.found_prey_id not in world.prey_by_id or predator.mind_state.found_prey_id is None:
             closest_prey = _find_closest_prey_for_predator(
                 predator.position,
                 world,
