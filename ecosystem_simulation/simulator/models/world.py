@@ -27,7 +27,16 @@ class SimulationState:
 
     def food(self) -> Iterable["Food"]:
         return self.food_by_id.values()
-    
+
+    def predator_count(self) -> int:
+        return len(self.predator_by_id)
+
+    def prey_count(self) -> int:
+        return len(self.prey_by_id)
+
+    def food_count(self) -> int:
+        return len(self.food_by_id)
+
     def serialize(self):
         return {
             "predators": [predator.serialize() for predator in self.predators()],
