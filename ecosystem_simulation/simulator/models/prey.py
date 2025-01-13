@@ -71,6 +71,8 @@ class Prey:
     # A persistent ID for this prey.
     id: "PreyId"
 
+    generation: int
+
     # Current mind state (idling, eating, ...).
     mind_state: "PreyMindState"
 
@@ -92,16 +94,18 @@ class Prey:
     def serialize(self):
         return {
             "id": self.id.serialize(),
+            "generation": self.generation,
             "mind_state": self.mind_state.serialize(),
             "genes": self.genes.serialize(),
             "position": self.position.serialize(),
             "satiation": self.satiation,
             "reproductive_urge": self.reproductive_urge
         }
-    
+
     def deserialize(data):
         return Prey(
             id=PreyId.deserialize(data["id"]),
+            generation=data["generation"],
             mind_state=PreyMindState.deserialize(data["mind_state"]),
             genes=PreyGenes.deserialize(data["genes"]),
             position=WorldPosition.deserialize(data["position"]),

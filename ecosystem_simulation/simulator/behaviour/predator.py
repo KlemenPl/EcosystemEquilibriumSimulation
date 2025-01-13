@@ -393,6 +393,7 @@ def tick_predator(
 
                 children.append(Predator(
                     id=PredatorId.new_random(),
+                    generation=predator.generation + 1,
                     mind_state=PredatorIdleState(),
                     genes=new_child_genes,
                     position=predator.position,

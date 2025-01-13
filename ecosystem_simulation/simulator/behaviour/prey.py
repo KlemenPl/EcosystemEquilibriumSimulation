@@ -423,6 +423,7 @@ def tick_prey(
 
                 children.append(Prey(
                     id=PreyId.new_random(),
+                    generation=prey.generation + 1,
                     mind_state=PreyIdleState(),
                     genes=new_child_genes,
                     position=prey.position,

@@ -103,6 +103,7 @@ def _prepare_initial_simulation_state(
 
         predator = Predator(
             id=PredatorId.new_random(),
+            generation=0,
             mind_state=PredatorIdleState(),
             genes=predator_genes,
             position=predator_position,
@@ -131,6 +132,7 @@ def _prepare_initial_simulation_state(
 
         prey = Prey(
             id=PreyId.new_random(),
+            generation=0,
             mind_state=PreyIdleState(),
             genes=prey_genes,
             position=prey_position,
@@ -188,6 +190,7 @@ def _run_simulation_for_one_tick(
 
         draft_world.add_predator(Predator(
             id=predator.id,
+            generation=0,
             mind_state=predator_tick_result.new_mind_state,
             genes=predator.genes,
             position=predator_tick_result.new_position,
@@ -222,6 +225,7 @@ def _run_simulation_for_one_tick(
 
         draft_world.add_prey(Prey(
             id=prey.id,
+            generation=0,
             mind_state=prey_tick_result.new_mind_state,
             genes=prey.genes,
             position=prey_tick_result.new_position,
