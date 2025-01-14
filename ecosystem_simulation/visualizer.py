@@ -14,8 +14,8 @@ from ecosystem_simulation.simulation_player import *
 BACKGROUND_COLOR = (200, 200, 200)
 GRID_COLOR = (160, 160, 160)
 PREDATOR_COLOR = (255, 0, 0)
-PREY_COLOR = (0, 200, 50)
-FOOD_COLOR = (0, 0, 255)
+PREY_COLOR = (0, 0, 255)
+FOOD_COLOR = (0, 200, 50)
 TEXT_COLOR = (0, 0, 0)
 
 
@@ -223,15 +223,15 @@ class EcosystemRecorder:
 
         # Calculate screen size
         margin = 40  # For text
-        self.screen_width = simulator._options.world_width * self.CELL_SIZE + margin * 2
-        self.screen_height = simulator._options.world_height * self.CELL_SIZE + margin * 2
+        self.screen_width = simulator.options.world_width * self.CELL_SIZE + margin * 2
+        self.screen_height = simulator.options.world_height * self.CELL_SIZE + margin * 2
 
         self.screen = pygame.Surface((self.screen_width, self.screen_height))
 
         # Center camera
         self.camera = Camera()
-        self.camera.x = simulator._options.world_width / 2
-        self.camera.y = simulator._options.world_height / 2
+        self.camera.x = simulator.options.world_width / 2
+        self.camera.y = simulator.options.world_height / 2
         self.camera.zoom = self.CELL_SIZE
 
         self.font = pygame.font.Font(None, 36)
@@ -250,8 +250,8 @@ class EcosystemRecorder:
         pygame.draw.rect(self.screen, color, rect)
 
     def draw_grid(self):
-        world_width = self.simulator._options.world_width
-        world_height = self.simulator._options.world_height
+        world_width = self.simulator.options.world_width
+        world_height = self.simulator.options.world_height
 
         for x in range(world_width + 1):
             start = self.camera.world_to_screen((x, 0), (self.screen_width, self.screen_height))

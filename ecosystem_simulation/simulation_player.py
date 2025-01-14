@@ -18,7 +18,7 @@ class SimulationPlayer:
             self.mode = PlayerMode.FILE
         elif mode == PlayerMode.SIMULATOR:
             self.simulator = source
-            self._options = source._options
+            self._options = source.options
             self.mode = PlayerMode.SIMULATOR
         else:
             raise ValueError("Invalid mode")

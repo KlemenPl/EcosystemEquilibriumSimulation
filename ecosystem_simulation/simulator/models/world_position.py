@@ -1,4 +1,4 @@
-
+import math
 from dataclasses import dataclass
 
 @dataclass(slots=True, init=True, eq=True, order=True, kw_only=True)
@@ -15,6 +15,15 @@ class WorldPosition:
 
     def distance_from(self, other: "WorldPosition") -> float:
         return math.sqrt((self.x - other.x) ** 2 + (self.y - other.y) ** 2)
+
+    def direction_to(self, target: "WorldPosition") -> "WorldPosition":
+        dx =  target.x - self.x
+        dy = target.y - self.y
+        # Normalize
+        dx = min(1, max(-1, dx))
+        dy = min(1, max(-1, dy))
+        return WorldPosition(x=dx, y=dy)
+
     
     def serialize(self):
         return {

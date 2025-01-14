@@ -5,7 +5,7 @@ from ecosystem_simulation.simulator import *
 class SimulationRecorder:
     def __init__(self, simulator: EcosystemSimulator):
         self.data = []
-        self.options = simulator._options
+        self.options = simulator.options
         simulator._on_tick = self.recordTick
 
     def recordTick(self, tick: SimulatedTick):

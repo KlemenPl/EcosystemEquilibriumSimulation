@@ -2,93 +2,26 @@ from dataclasses import dataclass
 
 
 @dataclass(slots=True, frozen=True)
-class PredatorSimulationOptions:
+class EntitySimulationOptions:
     # The number of predators to spawn when initializing the simulation grid.
     initial_number: int
 
     # Satiation value of initially spawned or newly born predators.
     initial_satiation_on_spawn: float
 
-    # Reproductive urge value of initially spawned or newly born predators.
-    initial_reproductive_urge_on_spawn: float
+    max_juvenile_in_ticks: int
 
-    pregnancy_duration_in_ticks: int
+    max_gestation_in_ticks: int
+
+    max_age_in_ticks: int
 
     # The maximum number of children a single predator specimen can birth at once.
     max_children_per_birth: int
 
     # How much satiation a specimen gains by eating one prey.
-    satiation_per_one_eaten_prey: float
+    satiation_per_feeding: float
 
     satiation_loss_per_tick: float
-
-    def serialize(self):
-        return {
-            "initial_number": self.initial_number,
-            "initial_satiation_on_spawn": self.initial_satiation_on_spawn,
-            "initial_reproductive_urge_on_spawn": self.initial_reproductive_urge_on_spawn,
-            "pregnancy_duration_in_ticks": self.pregnancy_duration_in_ticks,
-            "max_children_per_birth": self.max_children_per_birth,
-            "satiation_per_one_eaten_prey": self.satiation_per_one_eaten_prey,
-            "satiation_loss_per_tick": self.satiation_loss_per_tick
-        }
-    
-    def deserialize(data):
-        return PredatorSimulationOptions(
-            initial_number=data["initial_number"],
-            initial_satiation_on_spawn=data["initial_satiation_on_spawn"],
-            initial_reproductive_urge_on_spawn=data["initial_reproductive_urge_on_spawn"],
-            pregnancy_duration_in_ticks=data["pregnancy_duration_in_ticks"],
-            max_children_per_birth=data["max_children_per_birth"],
-            satiation_per_one_eaten_prey=data["satiation_per_one_eaten_prey"],
-            satiation_loss_per_tick=data["satiation_loss_per_tick"]
-        )
-
-
-@dataclass(slots=True, frozen=True)
-class PreySimulationOptions:
-    # The number of prey to spawn when initializing the simulation grid.
-    initial_number: int
-
-    # Satiation value of initially spawned or newly born prey.
-    initial_satiation_on_spawn: float
-
-    pregnancy_duration_in_ticks: int
-
-    # Reproductive urge value of initially spawned or newly born prey.
-    initial_reproductive_urge_on_spawn: float
-
-    # How much satiation a specimen gains by eating one food item.
-    satiation_per_food_item: float
-
-    # The maximum number of children a single prey specimen can birth at once.
-    max_children_per_birth: int
-
-    satiation_loss_per_tick: float
-
-    def serialize(self):
-        return {
-            "initial_number": self.initial_number,
-            "initial_satiation_on_spawn": self.initial_satiation_on_spawn,
-            "pregnancy_duration_in_ticks": self.pregnancy_duration_in_ticks,
-            "initial_reproductive_urge_on_spawn": self.initial_reproductive_urge_on_spawn,
-            "satiation_per_food_item": self.satiation_per_food_item,
-            "max_children_per_birth": self.max_children_per_birth,
-            "satiation_loss_per_tick": self.satiation_loss_per_tick
-        }
-    
-    def deserialize(data):
-        return PreySimulationOptions(
-            initial_number=data["initial_number"],
-            initial_satiation_on_spawn=data["initial_satiation_on_spawn"],
-            pregnancy_duration_in_ticks=data["pregnancy_duration_in_ticks"],
-            initial_reproductive_urge_on_spawn=data["initial_reproductive_urge_on_spawn"],
-            satiation_per_food_item=data["satiation_per_food_item"],
-            max_children_per_birth=data["max_children_per_birth"],
-            satiation_loss_per_tick=data["satiation_loss_per_tick"]
-        )    
-
-        
 
 
 @dataclass(slots=True, frozen=True)
@@ -113,14 +46,14 @@ class SimulationOptions:
     # the magnitude of the change, after which it is multiplied with this value.
     child_gene_mutation_magnitude_when_mating: float
 
-    initial_number_of_food_items: int
-
     # The spawning rate of food items per second.
     food_item_spawning_rate_per_tick: float
+    food_item_life_tick: int
+    initial_number_of_food_items: int
+    max_number_of_food_items: int
 
-    predator: PredatorSimulationOptions
-
-    prey: PreySimulationOptions
+    predator: EntitySimulationOptions
+    prey: EntitySimulationOptions
 
     def serialize(self):
         return {
@@ -146,6 +79,6 @@ class SimulationOptions:
             child_gene_mutation_magnitude_when_mating=data["child_gene_mutation_magnitude_when_mating"],
             initial_number_of_food_items=data["initial_number_of_food_items"],
             food_item_spawning_rate_per_tick=data["food_item_spawning_rate_per_tick"],
-            predator=PredatorSimulationOptions.deserialize(data["predator"]),
-            prey=PreySimulationOptions.deserialize(data["prey"])
+            predator=EntitySimulationOptions.deserialize(data["predator"]),
+            prey=EntitySimulationOptions.deserialize(data["prey"])
         )
