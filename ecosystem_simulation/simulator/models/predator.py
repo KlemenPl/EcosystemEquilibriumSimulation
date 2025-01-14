@@ -19,7 +19,8 @@ class PredatorId(EntityId):
     
     def serialize(self):
         return self.id
-    
+
+    @staticmethod
     def deserialize(data):
         return PredatorId(id=data)
 
@@ -55,7 +56,8 @@ class PredatorGenes:
             "vision": self.vision,
             "reproductive_urge_quickness": self.reproductive_urge_quickness
         }
-    
+
+    @staticmethod
     def deserialize(data):
         return PredatorGenes(
             aggression=data["aggression"],
@@ -98,7 +100,8 @@ class Predator:
             "satiation": self.satiation,
             "reproductive_urge": self.reproductive_urge
         }
-    
+
+    @staticmethod
     def deserialize(data):
         return Predator(
             id=PredatorId.deserialize(data["id"]),
@@ -119,7 +122,8 @@ class PredatorMindState(metaclass=ABCMeta):
     @abstractmethod
     def serialize(self):
         return NotImplemented
-    
+
+    @staticmethod
     def deserialize(data):
         type = data["type"]
         if type == "idle":
@@ -149,7 +153,8 @@ class PredatorIdleState(PredatorMindState):
 
     def serialize(self):
         return {"type": "idle"}
-    
+
+    @staticmethod
     def deserialize(data):
         return PredatorIdleState()
 
@@ -184,13 +189,14 @@ class PredatorReproductionState(PredatorMindState):
     def serialize(self):
         return {
             "type": "reproduction",
-            "found_mate_id": self.found_mate_id.serialize() if self.found_mate_id != None else None,
-            "denied_by": [id.serialize() for id in self.denied_by if self.denied_by != None]
+            "found_mate_id": self.found_mate_id.serialize() if self.found_mate_id is not None else None,
+            "denied_by": [id.serialize() for id in self.denied_by if self.denied_by is not None]
             }
-    
+
+    @staticmethod
     def deserialize(data):
         return PredatorReproductionState(
-            found_mate_id=PredatorId.deserialize(data["found_mate_id"]) if data["found_mate_id"] != None else None,
+            found_mate_id=PredatorId.deserialize(data["found_mate_id"]) if data["found_mate_id"] is not None else None,
             denied_by=[PredatorId.deserialize(id) for id in data["denied_by"]]
         )
 
@@ -213,7 +219,8 @@ class PredatorPregnantState(PredatorMindState):
             "ticks_until_birth": self.ticks_until_birth,
             "other_parent_genes": self.other_parent_genes.serialize()
         }
-    
+
+    @staticmethod
     def deserialize(data):
         return PredatorPregnantState(
             ticks_until_birth=data["ticks_until_birth"],
@@ -238,7 +245,7 @@ class PredatorHuntingState(PredatorMindState):
     found_prey_id: Optional["PreyId"]
 
     def serialize(self):
-        if (self.found_prey_id == None):
+        if self.found_prey_id is None:
             return {
                 "type": "hunting",
                 "found_prey_id": ""
@@ -248,9 +255,10 @@ class PredatorHuntingState(PredatorMindState):
                 "type": "hunting",
                 "found_prey_id": self.found_prey_id.id
             }
-                
+
+    @staticmethod
     def deserialize(data):
-        if (data["found_prey_id"] == ""):
+        if data["found_prey_id"] == "":
             return PredatorHuntingState(found_prey_id=None)
         else:
             return PredatorHuntingState(found_prey_id=PreyId.deserialize(data["found_prey_id"]))

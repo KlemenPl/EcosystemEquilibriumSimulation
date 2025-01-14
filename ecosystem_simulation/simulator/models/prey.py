@@ -19,7 +19,8 @@ class PreyId(EntityId):
     
     def serialize(self):
         return self.id
-    
+
+    @staticmethod
     def deserialize(data):
         return PreyId(id=data)
 
@@ -55,7 +56,8 @@ class PreyGenes:
             "vision": self.vision,
             "reproductive_urge_quickness": self.reproductive_urge_quickness
         }
-    
+
+    @staticmethod
     def deserialize(data):
         return PreyGenes(
             appetite=data["appetite"],
@@ -98,7 +100,8 @@ class Prey:
             "satiation": self.satiation,
             "reproductive_urge": self.reproductive_urge
         }
-    
+
+    @staticmethod
     def deserialize(data):
         return Prey(
             id=PreyId.deserialize(data["id"]),
@@ -118,7 +121,8 @@ class PreyMindState(metaclass=ABCMeta):
     @abstractmethod
     def serialize(self):
         return NotImplemented
-    
+
+    @staticmethod
     def deserialize(data):
         type = data["type"]
         if type == "idle":
@@ -151,7 +155,8 @@ class PreyIdleState(PreyMindState):
         return {
             "type": "idle"
         }
-    
+
+    @staticmethod
     def deserialize(data):
         return PreyIdleState()
 
@@ -179,13 +184,14 @@ class PreyReproductionState(PreyMindState):
     def serialize(self):
         return {
             "type": "reproduction",
-            "found_mate_id": self.found_mate_id.serialize() if self.found_mate_id != None else None,
-            "denied_by": [id.serialize() for id in self.denied_by if self.denied_by != None]
+            "found_mate_id": self.found_mate_id.serialize() if self.found_mate_id is not None else None,
+            "denied_by": [id.serialize() for id in self.denied_by if self.denied_by is not None]
         }
-    
+
+    @staticmethod
     def deserialize(data):
         return PreyReproductionState(
-            found_mate_id=PreyId.deserialize(data["found_mate_id"]) if data["found_mate_id"] != None else None,
+            found_mate_id=PreyId.deserialize(data["found_mate_id"]) if data["found_mate_id"] is not None else None,
             denied_by=[PreyId.deserialize(id) for id in data["denied_by"]]
         )
 
@@ -209,7 +215,8 @@ class PreyPregnantState(PreyMindState):
             "ticks_until_birth": self.ticks_until_birth,
             "other_parent_genes": self.other_parent_genes.serialize()
         }
-    
+
+    @staticmethod
     def deserialize(data):
         return PreyPregnantState(
             ticks_until_birth=data["ticks_until_birth"],
@@ -236,7 +243,8 @@ class PreyFoodSearchState(PreyMindState):
             "type": "food_search",
             "found_food_tile_id": self.found_food_tile_id.serialize() if self.found_food_tile_id != None else None
         }
-    
+
+    @staticmethod
     def deserialize(data):
         return PreyFoodSearchState(
             found_food_tile_id=FoodId.deserialize(data["found_food_tile_id"]) if data["found_food_tile_id"] != None else None

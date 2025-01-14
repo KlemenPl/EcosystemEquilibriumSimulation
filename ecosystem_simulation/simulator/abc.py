@@ -16,6 +16,7 @@ class SimulatedTick:
             "state": self.state.serialize(),
         }
 
+    @staticmethod
     def deserialize(data: dict):
         return SimulatedTick(tick_number=data["tick_number"], state=SimulationState.deserialize(data["state"]))
 

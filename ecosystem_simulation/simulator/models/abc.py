@@ -5,6 +5,7 @@ class EntityId(metaclass=ABCMeta):
     def serialize(self):
         return NotImplemented
     
+    @staticmethod
     @abstractmethod
-    def deserialize(self, data):
+    def deserialize(data):
         return NotImplemented

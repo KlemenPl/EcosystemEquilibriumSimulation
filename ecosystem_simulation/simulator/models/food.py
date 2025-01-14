@@ -6,7 +6,7 @@ from .world_position import WorldPosition
 from .abc import EntityId
 
 if TYPE_CHECKING:
-    from .world import WorldPosition
+    from .world_position import WorldPosition
 
 
 @dataclass(slots=True, frozen=True)
@@ -19,7 +19,8 @@ class FoodId(EntityId):
     
     def serialize(self):
         return self.id
-    
+
+    @staticmethod
     def deserialize(data):
         return FoodId(id=data)
 
@@ -35,7 +36,8 @@ class Food:
             "id": self.id.serialize(),
             "position": self.position.serialize()
         }
-    
+
+    @staticmethod
     def deserialize(data):
         return Food(
             id=FoodId.deserialize(data["id"]),

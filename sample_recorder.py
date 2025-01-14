@@ -41,7 +41,7 @@ def main():
         )
     )
 
-    recorder = SimulationRecorder(simulator)
+    sim_recorder = SimulationRecorder(simulator)
     time_before = time.time()
     tick_count = 1000
     for _ in range(tick_count):
@@ -50,7 +50,11 @@ def main():
     time_elapsed = time.time() - time_before
     print(f"Simulated {tick_count} more ticks in {round(time_elapsed, 2)} seconds.")
 
-    recorder.saveJson(args.filename)
+    sim_recorder.saveJson(args.filename)
+
+    # Uncomment to record
+    #gif_recorder = EcosystemRecorder(simulator)
+    #gif_recorder.record("ecosystem_simulation.gif")
 
 
 if __name__ == '__main__':

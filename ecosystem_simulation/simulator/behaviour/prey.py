@@ -287,7 +287,7 @@ def tick_prey(
 
         # The prey has already chosen which food tile to eat - move towards it until we reach it.
 
-        # If we reach the target, despawn the food item and give the predator
+        # If we reach the target, despawn the food item and give the prey
         # some satiation.
         if prey.position == food_item.position:
             # Eat the food item and transition back to the idle state.

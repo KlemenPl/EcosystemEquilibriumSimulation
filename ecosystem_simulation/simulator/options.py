@@ -32,7 +32,8 @@ class PredatorSimulationOptions:
             "satiation_per_one_eaten_prey": self.satiation_per_one_eaten_prey,
             "satiation_loss_per_tick": self.satiation_loss_per_tick
         }
-    
+
+    @staticmethod
     def deserialize(data):
         return PredatorSimulationOptions(
             initial_number=data["initial_number"],
@@ -76,7 +77,8 @@ class PreySimulationOptions:
             "max_children_per_birth": self.max_children_per_birth,
             "satiation_loss_per_tick": self.satiation_loss_per_tick
         }
-    
+
+    @staticmethod
     def deserialize(data):
         return PreySimulationOptions(
             initial_number=data["initial_number"],
@@ -87,8 +89,6 @@ class PreySimulationOptions:
             max_children_per_birth=data["max_children_per_birth"],
             satiation_loss_per_tick=data["satiation_loss_per_tick"]
         )    
-
-        
 
 
 @dataclass(slots=True, frozen=True)
@@ -135,7 +135,8 @@ class SimulationOptions:
             "predator": self.predator.serialize(),
             "prey": self.prey.serialize()
         }
-        
+
+    @staticmethod
     def deserialize(data):
         return SimulationOptions(
             randomness_seed=data["randomness_seed"],

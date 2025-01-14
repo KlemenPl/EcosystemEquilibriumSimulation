@@ -44,7 +44,8 @@ class SimulationState:
             "food": [food.serialize() for food in self.food()],
             "food_spawning_accumulator": self.food_spawning_accumulator
         }
-    
+
+    @staticmethod
     def deserialize(data):
         predator_by_id={PredatorId.deserialize(predator["id"]): Predator.deserialize(predator) for predator in data["predators"]}
         prey_by_id={PreyId.deserialize(prey["id"]): Prey.deserialize(prey) for prey in data["prey"]}
