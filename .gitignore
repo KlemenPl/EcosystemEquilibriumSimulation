@@ -163,3 +163,5 @@ cython_debug/
 schema/.$*bkp
 services/users/data
 .idea
+
+graphs/
