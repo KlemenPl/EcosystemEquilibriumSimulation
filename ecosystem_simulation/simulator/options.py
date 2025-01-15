@@ -54,31 +54,3 @@ class SimulationOptions:
 
     predator: EntitySimulationOptions
     prey: EntitySimulationOptions
-
-    def serialize(self):
-        return {
-            "randomness_seed": self.randomness_seed,
-            "world_width": self.world_width,
-            "world_height": self.world_height,
-            "max_vision_distance": self.max_vision_distance,
-            "child_gene_mutation_chance_when_mating": self.child_gene_mutation_chance_when_mating,
-            "child_gene_mutation_magnitude_when_mating": self.child_gene_mutation_magnitude_when_mating,
-            "initial_number_of_food_items": self.initial_number_of_food_items,
-            "food_item_spawning_rate_per_tick": self.food_item_spawning_rate_per_tick,
-            "predator": self.predator.serialize(),
-            "prey": self.prey.serialize()
-        }
-        
-    def deserialize(data):
-        return SimulationOptions(
-            randomness_seed=data["randomness_seed"],
-            world_width=data["world_width"],
-            world_height=data["world_height"],
-            max_vision_distance=data["max_vision_distance"],
-            child_gene_mutation_chance_when_mating=data["child_gene_mutation_chance_when_mating"],
-            child_gene_mutation_magnitude_when_mating=data["child_gene_mutation_magnitude_when_mating"],
-            initial_number_of_food_items=data["initial_number_of_food_items"],
-            food_item_spawning_rate_per_tick=data["food_item_spawning_rate_per_tick"],
-            predator=EntitySimulationOptions.deserialize(data["predator"]),
-            prey=EntitySimulationOptions.deserialize(data["prey"])
-        )

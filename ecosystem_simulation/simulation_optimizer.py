@@ -1,3 +1,4 @@
+from dataclasses import asdict
 from pathlib import Path
 from queue import Empty
 
@@ -6,42 +7,35 @@ import json
 from datetime import datetime
 import random
 
-from skopt import gp_minimize
-from skopt.space import Real, Integer
-from skopt.utils import use_named_args
-
 from ecosystem_simulation.simulator import EcosystemSimulator
-from ecosystem_simulation.simulator.options import PredatorSimulationOptions, PreySimulationOptions, SimulationOptions
+from ecosystem_simulation.simulator.options import *
 
+def generate_random_entity_options() -> EntitySimulationOptions:
+    return EntitySimulationOptions(
+        initial_number=random.randint(200, 1000),
+        initial_satiation_on_spawn=random.randint(10, 50) / 100,
+        max_juvenile_in_ticks=random.randint(10, 50),
+        max_gestation_in_ticks=random.randint(10, 50),
+        max_age_in_ticks=random.randint(50, 100),
+        max_children_per_birth=random.randint(5, 10),
+        satiation_per_feeding=random.randint(4, 10) / 10,
+        satiation_loss_per_tick=random.randint(1, 40) / 100,
+    )
 
-def generate_random_sim_options() -> SimulationOptions:
+def generate_random_sim_options(seed: int) -> SimulationOptions:
     return SimulationOptions(
-        randomness_seed=random.randint(0, 2 ** 32),
+        randomness_seed=seed,
         world_width=256,
         world_height=256,
         max_vision_distance=random.randint(0, 20),
         child_gene_mutation_chance_when_mating=random.uniform(0.01, 0.5),
         child_gene_mutation_magnitude_when_mating=random.uniform(0.01, 0.5),
-        initial_number_of_food_items=random.randint(0, 1000),
-        food_item_spawning_rate_per_tick=random.uniform(0, 100),
-        predator=PredatorSimulationOptions(
-            initial_number=random.randint(1, 1000),
-            initial_satiation_on_spawn=1,
-            initial_reproductive_urge_on_spawn=random.uniform(0.1, 0.8),
-            pregnancy_duration_in_ticks=random.randint(1, 50),
-            max_children_per_birth=random.randint(1, 20),
-            satiation_per_one_eaten_prey=random.uniform(0.2, 0.8),
-            satiation_loss_per_tick=random.uniform(0.01, 0.1),
-        ),
-        prey=PreySimulationOptions(
-            initial_number=random.randint(1, 1000),
-            initial_satiation_on_spawn=1,
-            pregnancy_duration_in_ticks=random.randint(1, 50),
-            initial_reproductive_urge_on_spawn=random.uniform(0.1, 0.8),
-            satiation_per_food_item=random.uniform(0.2, 0.8),
-            max_children_per_birth=random.randint(1, 20),
-            satiation_loss_per_tick=random.uniform(0.01, 0.1),
-        ),
+        food_item_spawning_rate_per_tick=random.randint(1, 100),
+        food_item_life_tick=random.randint(10, 100),
+        initial_number_of_food_items=random.randint(200, 10000),
+        max_number_of_food_items=random.randint(1000, 35000),
+        predator=generate_random_entity_options(),
+        prey=generate_random_entity_options(),
     )
 
 
@@ -60,7 +54,7 @@ import traceback
 def evaluate_worker(worker_id: int, max_ticks: int, result_queue: mp.Queue) -> (int, SimulationOptions):
     while True:
         try:
-            params = generate_random_sim_options()
+            params = generate_random_sim_options(random.randint(1, 2 ** 32))
             num_ticks = evaluate_sim(max_ticks, params)
             result_queue.put((num_ticks, params))
         except Exception as e:
@@ -77,7 +71,7 @@ def save_best_params(score: int, params: SimulationOptions):
         "timestamp": timestamp,
         "seed": params.randomness_seed,
         "score": score,
-        "params": params.serialize(),
+        "params": json.dumps(asdict(params)),
     }
 
     output_path = output_dir / f"best_{timestamp}_{score}.json"
@@ -87,9 +81,9 @@ def save_best_params(score: int, params: SimulationOptions):
     print(f"Saved best parameters to {output_path}")
 
 
-def random_search(max_ticks: int):
+def random_search(max_simulations: int, max_ticks: int=5000):
     best_score: int = 0
-    best_params: SimulationOptions = generate_random_sim_options()
+    best_params: SimulationOptions = generate_random_sim_options(0)
     simulation_count: int = 0
 
     num_cores = mp.cpu_count()
@@ -109,7 +103,7 @@ def random_search(max_ticks: int):
         p.start()
 
     try:
-        while True:
+        while simulation_count < max_simulations:
             try:
                 score, options = result_queue.get()
                 simulation_count += 1
@@ -133,92 +127,9 @@ def random_search(max_ticks: int):
 
     return best_params
 
-space = [
-        Integer(0, 20, name='max_vision_distance'),
-        Real(0, 1, name='child_gene_mutation_chance'),
-        Real(0, 1, name='child_gene_mutation_magnitude'),
-        Integer(0, 1000, name='initial_food_items'),
-        Real(0, 100, name='food_spawn_rate'),
-        # Predator parameters
-        Integer(1, 1000, name='predator_initial_number'),
-        Real(0.1, 0.8, name='predator_initial_satiation'),
-        Real(0.1, 0.8, name='predator_initial_reproductive_urge'),
-        Integer(1, 100, name='predator_pregnancy_duration'),
-        Integer(1, 20, name='predator_max_children'),
-        Real(0.2, 0.8, name='predator_satiation_per_prey'),
-        Real(0.01, 0.1, name='predator_satiation_loss'),
-        # Prey parameters
-        Integer(1, 1000, name='prey_initial_number'),
-        Real(0.1, 0.8, name='prey_initial_satiation'),
-        Real(0.1, 0.8, name='prey_initial_reproductive_urge'),
-        Integer(1, 100, name='prey_pregnancy_duration'),
-        Integer(1, 20, name='prey_max_children'),
-        Real(0.2, 0.8, name='prey_satiation_per_food'),
-        Real(0.01, 0.1, name='prey_satiation_loss'),
-]
-
-def create_sim_options(**kwargs) -> SimulationOptions:
-    return SimulationOptions(
-        randomness_seed=random.randint(1, 2 ** 32),
-        world_width=256,
-        world_height=256,
-        max_vision_distance=kwargs['max_vision_distance'],
-        child_gene_mutation_chance_when_mating=kwargs['child_gene_mutation_chance'],
-        child_gene_mutation_magnitude_when_mating=kwargs['child_gene_mutation_magnitude'],
-        initial_number_of_food_items=kwargs['initial_food_items'],
-        food_item_spawning_rate_per_tick=kwargs['food_spawn_rate'],
-        predator=PredatorSimulationOptions(
-            initial_number=kwargs['predator_initial_number'],
-            initial_satiation_on_spawn=kwargs['predator_initial_satiation'],
-            initial_reproductive_urge_on_spawn=kwargs['predator_initial_reproductive_urge'],
-            pregnancy_duration_in_ticks=kwargs['predator_pregnancy_duration'],
-            max_children_per_birth=kwargs['predator_max_children'],
-            satiation_per_one_eaten_prey=kwargs['predator_satiation_per_prey'],
-            satiation_loss_per_tick=kwargs['predator_satiation_loss'],
-        ),
-        prey=PreySimulationOptions(
-            initial_number=kwargs['prey_initial_number'],
-            initial_satiation_on_spawn=kwargs['prey_initial_satiation'],
-            initial_reproductive_urge_on_spawn=kwargs['prey_initial_reproductive_urge'],
-            pregnancy_duration_in_ticks=kwargs['prey_pregnancy_duration'],
-            max_children_per_birth=kwargs['prey_max_children'],
-            satiation_per_food_item=kwargs['prey_satiation_per_food'],
-            satiation_loss_per_tick=kwargs['prey_satiation_loss'],
-        ),
-    )
-
-
-@use_named_args(space)
-def objective(**kwargs) -> float:
-    options = create_sim_options(**kwargs)
-    return -evaluate_sim(max_ticks=20000, options=options)
-
-def qp_minimize(max_ticks: int):
-    result = gp_minimize(
-        objective,
-        space,
-        n_calls=80,
-        n_initial_points=40,
-        n_random_starts=20,
-        noise=0.1,
-        random_state=42,
-        n_jobs=-1,
-        acq_func='EI',
-        verbose=True,
-    )
-
-    best_params = result.x
-    best_score = -result.fun
-
-    print(f"Best score (ticks survived): {best_score}")
-    print("\nBest parameters found:")
-    for param, value in zip([dim.name for dim in space], best_params):
-        print(f"{param}: {value}")
-
 
 if __name__ == '__main__':
-    best = random_search(max_ticks=100000)
-    #qp_minimize(max_ticks=100000)
+    best = random_search(max_simulations=100000000, max_ticks=5000)
 
     print("\nOptimization complete. Best parameters:")
     print(json.dumps(best, indent=4))
