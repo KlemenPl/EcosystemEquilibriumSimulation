@@ -1,5 +1,6 @@
 import math
 from dataclasses import dataclass
+import math
 
 @dataclass(slots=True, init=True, eq=True, order=True, kw_only=True)
 class WorldPosition:
@@ -30,6 +31,7 @@ class WorldPosition:
             "x": self.x,
             "y": self.y
         }
-    
+
+    @staticmethod
     def deserialize(data):
         return WorldPosition(x=data["x"], y=data["y"])
