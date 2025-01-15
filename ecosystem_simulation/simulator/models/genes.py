@@ -48,7 +48,7 @@ class Genes:
             final_gene = (x + y) / 2
             if rng.uniform(0, 1) < mutation_chance:
                 final_gene += rng.gauss(mutation_magnitude, mutation_chance)
-            return final_gene
+            return max(0.0, min(final_gene, 1.0))
 
         new_genes = Genes(
             appetite=mix_genes(self.appetite, other.appetite),
