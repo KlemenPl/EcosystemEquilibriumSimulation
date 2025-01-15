@@ -1,3 +1,4 @@
+import json
 from dataclasses import dataclass
 
 
@@ -54,3 +55,18 @@ class SimulationOptions:
 
     predator: EntitySimulationOptions
     prey: EntitySimulationOptions
+
+    @staticmethod
+    def from_json_str(json_str: str) -> "SimulationOptions":
+        params = json.loads(json_str)
+
+        predator = EntitySimulationOptions(**params.pop("predator"))
+        prey = EntitySimulationOptions(**params.pop("prey"))
+
+        return SimulationOptions(**params, predator=predator, prey=prey)
+
+    @staticmethod
+    def from_json_file(path: str) -> "SimulationOptions":
+        with open(path, "r") as f:
+            res = json.loads(f.read())
+            return SimulationOptions.from_json_str(res["params"])
