@@ -3,7 +3,6 @@ from pathlib import Path
 from queue import Empty
 
 import multiprocessing as mp
-import json
 from datetime import datetime
 import random
 
@@ -13,7 +12,7 @@ from ecosystem_simulation.simulator.options import *
 def generate_random_entity_options() -> EntitySimulationOptions:
     return EntitySimulationOptions(
         initial_number=random.randint(200, 1000),
-        initial_satiation_on_spawn=random.randint(10, 50) / 100,
+        initial_satiation_on_spawn=random.randint(10, 30) / 100,
         max_juvenile_in_ticks=random.randint(10, 50),
         max_gestation_in_ticks=random.randint(10, 50),
         max_age_in_ticks=random.randint(50, 100),
@@ -27,13 +26,13 @@ def generate_random_sim_options(seed: int) -> SimulationOptions:
         randomness_seed=seed,
         world_width=256,
         world_height=256,
-        max_vision_distance=random.randint(0, 20),
+        max_vision_distance=random.randint(1, 20),
         child_gene_mutation_chance_when_mating=random.uniform(0.01, 0.5),
         child_gene_mutation_magnitude_when_mating=random.uniform(0.01, 0.5),
-        food_item_spawning_rate_per_tick=random.randint(1, 100),
+        food_item_spawning_rate_per_tick=random.randint(1, 15),
         food_item_life_tick=random.randint(10, 100),
-        initial_number_of_food_items=random.randint(200, 10000),
-        max_number_of_food_items=random.randint(1000, 35000),
+        initial_number_of_food_items=random.randint(200, 1000),
+        max_number_of_food_items=random.randint(1000, 3000),
         predator=generate_random_entity_options(),
         prey=generate_random_entity_options(),
     )
