@@ -459,7 +459,6 @@ class EcosystemSimulator(SimulatorBackend):
                 predator.state = new_state
 
             update_state(predator, opts.predator)
-            check_creature_aliveness(predator, opts.predator.max_age_in_ticks)
 
         # Process all prey
         for prey in list(world.prey()):
@@ -474,7 +473,11 @@ class EcosystemSimulator(SimulatorBackend):
                 prey.state = new_state
 
             update_state(prey, opts.prey)
-            check_creature_aliveness(prey, opts.prey.max_age_in_ticks)
+
+        for prey in world.prey():
+            check_creature_aliveness(prey, opts.predator.max_age_in_ticks)
+        for predator in world.predators():
+            check_creature_aliveness(predator, opts.predator.max_age_in_ticks)
 
         # Overcrowding (no more than two entities can present on the same place)
         for _, values in world.prey_by_position.items():
