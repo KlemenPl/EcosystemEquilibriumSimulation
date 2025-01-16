@@ -215,7 +215,9 @@ class EcosystemSimulator(SimulatorBackend):
 
         def creature_update(c: Creature, entity_opts: EntitySimulationOptions) -> bool:
             # Common logic
-            c.satiation -= entity_opts.satiation_loss_per_tick
+            c.satiation -= entity_opts.satiation_loss_per_tick * (1 + c.genes.speed / 10 + c.genes.vision / 20)
+            if c.pregnant:
+                c.satiation -= (c.genes.min_children + c.genes.max_children) / 200
             if c.mature and not c.pregnant:
                 c.reproductive_urge += c.genes.reproductive_urge_quickness
             elif c.age_ticks >= c.genes.maturity_age * entity_opts.max_juvenile_in_ticks:
@@ -229,7 +231,10 @@ class EcosystemSimulator(SimulatorBackend):
                 c.pregnant = False
                 c.pregnant_duration = 0
 
-            c.move_accum += c.genes.speed
+            speed_reduction = 1
+            if c.pregnant:
+                speed_reduction = 1.1
+            c.move_accum += c.genes.speed / speed_reduction
             if c.move_accum < 1:
                 return False
             c.move_accum -= 1
@@ -242,9 +247,9 @@ class EcosystemSimulator(SimulatorBackend):
                 # Note: So entities wonder in somewhat similar direction (no back and forth)
                 change_x = self._rng.choice([True, False])
                 if change_x:
-                    c.state.dir_x = max(-1, min(1, state.dir_x + self._rng.choice([-1, 0, 1])))
+                    c.state.dir_x = max(-1, min(1, state.dir_x + self._rng.choice([-1, 0, 0, 1])))
                 else:
-                    c.state.dir_y = max(-1, min(1, state.dir_y + self._rng.choice([-1, 0, 1])))
+                    c.state.dir_y = max(-1, min(1, state.dir_y + self._rng.choice([-1, 0, 0, 1])))
 
                 new_x = c.position.x + c.state.dir_x
                 new_y = c.position.y + c.state.dir_y
@@ -266,6 +271,7 @@ class EcosystemSimulator(SimulatorBackend):
                     # Hunted
                     target.alive = False
                     c.satiation += entity_opts.satiation_per_feeding
+                    c.satiation = min(1.0, c.satiation)
                 elif target.alive and c.position == target.position and isinstance(state, MateState):
                     # Mated
                     if not target.pregnant:
