@@ -4,8 +4,10 @@ from dataclasses import field, dataclass
 from typing import Callable, Optional, cast
 
 from .abc import SimulatorBackend, SimulatedTick
-from .options import SimulationOptions, EntitySimulationOptions
+from .fuzzy_logic import determine_state_fuzzy, State
+from .options import SimulationOptions, EntitySimulationOptions, LogicType
 from .models import *
+from sys import maxsize
 
 class DraftSimulationState:
     grid_width: int
@@ -118,6 +120,7 @@ class EcosystemSimulator(SimulatorBackend):
                 reproductive_urge_quickness=self._rng.uniform(0.2, 0.8),
                 timidity=self._rng.uniform(0.2, 0.8),
             )
+
         def spawn_args(pos: WorldPosition, satiation: float, genes: Genes):
             mature = self._rng.choice([True, False])
             reproductive_urge = 0
@@ -145,6 +148,7 @@ class EcosystemSimulator(SimulatorBackend):
                 'pregnant_duration': pregnant_duration,
                 'pregnant_partner_genes': genes,
             }
+
         for _ in range(opts.predator.initial_number):
             # Spawn the predator at a random position in the state.
             args = spawn_args(self._random_position(), opts.predator.initial_satiation_on_spawn, random_genes())
@@ -294,9 +298,60 @@ class EcosystemSimulator(SimulatorBackend):
             c.position.x = min(max(0, c.position.x), opts.world_width - 1)
             c.position.y = min(max(0, c.position.y), opts.world_height - 1)
 
+        def determine_creature_state_fuzzy(_creature: Creature, vision) -> any:
+            """
+            Common logic for determining next creature state.
+            """
+            if isinstance(_creature, Prey):
+                food_iterator = world.iter_nearby_food(_creature.position, vision)
+                mate_iterator = world.iter_nearby_prey(_creature.position, vision)
+            else:
+                food_iterator = world.iter_nearby_prey(_creature.position, vision)
+                mate_iterator = world.iter_nearby_predator(_creature.position, vision)
 
-        def determine_prey_state(prey: Prey) -> EntityState:
+            # Get the closest food and mate
+            closest_food_id = None
+            food_dst = maxsize
+            for food in food_iterator:
+                dst = _creature.position.distance_from(food.position)
+                if dst < food_dst:
+                    closest_food_id = food.id
+                    food_dst = dst
+
+            closest_mate_id = None
+            mate_dst = maxsize
+            for mate in mate_iterator:
+                if mate == _creature:
+                    continue
+                if not mate.mature or mate.pregnant:
+                    continue
+                dst = _creature.position.distance_from(mate.position)
+                if dst < mate_dst:
+                    closest_mate_id = mate.id
+                    mate_dst = dst
+
+            _new_state = determine_state_fuzzy(_creature, vision, food_dst, mate_dst)
+
+            # In case the creature wants to mate or eat food without having a nearby target
+            # (If the fuzzy logic is correctly constructed this should not occur)
+            if _new_state == State.FOOD and not closest_food_id or \
+                _new_state == State.REPRODUCTION and not closest_mate_id:
+                return WanderingState(self._rng.randint(-1, 1), self._rng.randint(-1, 1))
+
+            if _new_state == State.FOOD:
+                return HuntState(closest_food_id)
+            elif _new_state == State.REPRODUCTION:
+                return MateState(closest_mate_id)
+            else:
+                return WanderingState(self._rng.randint(-1, 1), self._rng.randint(-1, 1))
+
+
+        def determine_prey_state(prey: Prey, logic: LogicType) -> EntityState:
             vision = round(prey.genes.vision * opts.max_vision_distance)
+
+            if logic == LogicType.FUZZY:
+                return determine_creature_state_fuzzy(prey, vision)
+
             # Check flee first (highest priority for survival)
             closest_pred = None
             pred_dst = opts.world_width * opts.world_height
@@ -342,8 +397,13 @@ class EcosystemSimulator(SimulatorBackend):
             # Wander
             return WanderingState(self._rng.randint(-1, 1), self._rng.randint(-1, 1))
 
-        def determine_predator_state(pred: Predator) -> EntityState:
+        def determine_predator_state(pred: Predator, logic: LogicType) -> EntityState:
             vision = round(pred.genes.vision * opts.max_vision_distance)
+
+            if logic == LogicType.FUZZY:
+                return determine_creature_state_fuzzy(pred, vision)
+
+
             # No need to flee
             # Check hunting (when hungry)
             if pred.satiation < pred.genes.appetite:
@@ -377,33 +437,46 @@ class EcosystemSimulator(SimulatorBackend):
             return WanderingState(self._rng.randint(-1, 1), self._rng.randint(-1, 1))
 
 
-        for pred in list(world.predators()):
-            if not pred.alive:
+        def check_creature_aliveness(c: Creature, max_age: int):
+            c.age_ticks += 1
+            if c.age_ticks >= round(c.genes.lifespan * max_age):
+                c.alive = False
+            if c.satiation <= 0:
+                c.alive = False
+
+        # END HELPER FUNCTIONS FOR NEXT STATE #########################################################################
+
+        # Process all predators
+        for predator in list(world.predators()):
+            if not predator.alive:
                 continue
-            if not creature_update(pred, opts.predator):
+            if not creature_update(predator, opts.predator):
                 continue
 
-            new_state = determine_predator_state(pred)
-            if not (isinstance(new_state, WanderingState) and isinstance(pred.state, WanderingState)):
+            new_state = determine_predator_state(predator, opts.logic_determine_creature_state)
+            if not (isinstance(new_state, WanderingState) and isinstance(predator.state, WanderingState)):
                 # Note: WanderingState should remain the same...
-                pred.state = new_state
+                predator.state = new_state
 
-            update_state(pred, opts.predator)
+            update_state(predator, opts.predator)
+            check_creature_aliveness(predator, opts.predator.max_age_in_ticks)
 
+        # Process all prey
         for prey in list(world.prey()):
             if not prey.alive:
                 continue
             if not creature_update(prey, opts.prey):
                 continue
 
-            new_state = determine_prey_state(prey)
+            new_state = determine_prey_state(prey, opts.logic_determine_creature_state)
             if not (isinstance(new_state, WanderingState) and isinstance(prey.state, WanderingState)):
                 # Note: WanderingState should remain the same...
                 prey.state = new_state
 
             update_state(prey, opts.prey)
+            check_creature_aliveness(prey, opts.prey.max_age_in_ticks)
 
-        # Overvrowding
+        # Overcrowding (no more than two entities can present on the same place)
         for _, values in world.prey_by_position.items():
             if len(values) >= 3:
                 values[0].alive = False
@@ -411,24 +484,13 @@ class EcosystemSimulator(SimulatorBackend):
             if len(values) >= 3:
                 values[0].alive = False
 
-        # Update tick
+        # Update food age ticks
         for food in world.food():
             food.age_ticks += 1
             if food.age_ticks >= opts.food_item_life_tick:
                 food.alive = False
-        def check_creature_aliveness(c: Creature, max_age: int):
-            c.age_ticks += 1
-            if c.age_ticks >= round(c.genes.lifespan * max_age):
-                c.alive = False
-            if c.satiation <= 0:
-                c.alive = False
-        for prey in world.prey():
-            check_creature_aliveness(prey, opts.prey.max_age_in_ticks)
-        for pred in world.predators():
-            check_creature_aliveness(pred, opts.predator.max_age_in_ticks)
 
-
-        # Copy over
+        # Copy all old entities to the new state
         for entity in world.iter_entities():
             if not entity.alive:
                 continue
@@ -456,7 +518,6 @@ class EcosystemSimulator(SimulatorBackend):
             new_food_spawning_accumulator -= 1.0
 
         new_world.set_food_spawning_accumulator(new_food_spawning_accumulator)
-
 
         return new_world.into_final_simulation_state()
 

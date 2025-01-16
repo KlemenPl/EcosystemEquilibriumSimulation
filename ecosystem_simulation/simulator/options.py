@@ -1,5 +1,11 @@
 import json
 from dataclasses import dataclass
+from enum import IntEnum
+
+
+class LogicType(IntEnum):
+    NORMAL = 1
+    FUZZY = 2
 
 
 @dataclass(slots=True, frozen=True)
@@ -10,8 +16,10 @@ class EntitySimulationOptions:
     # Satiation value of initially spawned or newly born predators.
     initial_satiation_on_spawn: float
 
+    # Combines with maturity age gene to determine ticks until maturity.
     max_juvenile_in_ticks: int
 
+    # Combines with gestation age gene to determine ticks until new offspring is born.
     max_gestation_in_ticks: int
 
     max_age_in_ticks: int
@@ -28,6 +36,9 @@ class EntitySimulationOptions:
 @dataclass(slots=True, frozen=True)
 class SimulationOptions:
     randomness_seed: int
+
+    # This sets the logic used for determining creature next creature state
+    logic_determine_creature_state: LogicType
 
     # This means the x position values will go from `0` to `world_width` (exclusive).
     world_width: int

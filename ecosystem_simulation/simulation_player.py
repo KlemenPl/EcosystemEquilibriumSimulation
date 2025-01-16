@@ -1,11 +1,12 @@
 import json
 from typing import Union
+from enum import Enum, auto
 
 from ecosystem_simulation.simulator import *
 
-class PlayerMode:
-    SIMULATOR = 0
-    FILE = 1
+class PlayerMode(Enum):
+    SIMULATOR = auto()
+    FILE = auto()
 
 class SimulationPlayer:
     _options: SimulationOptions
