@@ -11,13 +11,13 @@ from ecosystem_simulation.simulator.options import *
 
 def generate_random_entity_options() -> EntitySimulationOptions:
     return EntitySimulationOptions(
-        initial_number=random.randint(200, 1000),
-        initial_satiation_on_spawn=random.randint(10, 30) / 100,
-        max_juvenile_in_ticks=random.randint(10, 50),
-        max_gestation_in_ticks=random.randint(10, 50),
-        max_age_in_ticks=random.randint(50, 100),
-        max_children_per_birth=random.randint(5, 10),
-        satiation_per_feeding=random.randint(4, 10) / 10,
+        initial_number=random.randint(200, 800),
+        initial_satiation_on_spawn=random.randint(10, 25) / 100,
+        max_juvenile_in_ticks=20,
+        max_gestation_in_ticks=20,
+        max_age_in_ticks=80,
+        max_children_per_birth=8,
+        satiation_per_feeding=random.randint(4, 9) / 10,
         satiation_loss_per_tick=random.randint(1, 40) / 100,
     )
 
@@ -26,9 +26,9 @@ def generate_random_sim_options(seed: int) -> SimulationOptions:
         randomness_seed=seed,
         world_width=256,
         world_height=256,
-        max_vision_distance=random.randint(1, 20),
-        child_gene_mutation_chance_when_mating=random.uniform(0.01, 0.5),
-        child_gene_mutation_magnitude_when_mating=random.uniform(0.01, 0.5),
+        max_vision_distance=8,
+        child_gene_mutation_chance_when_mating=random.randint(1, 20) / 100,
+        child_gene_mutation_magnitude_when_mating=random.randint(1, 20) / 100,
         food_item_spawning_rate_per_tick=random.randint(10, 40),
         food_item_life_tick=random.randint(50, 100),
         initial_number_of_food_items=random.randint(500, 1000),
