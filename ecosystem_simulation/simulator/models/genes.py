@@ -47,7 +47,8 @@ class Genes:
         def mix_genes(x: float, y: float) -> float:
             final_gene = (x + y) / 2
             if rng.uniform(0, 1) < mutation_chance:
-                final_gene += rng.gauss(mutation_magnitude, mutation_chance)
+                dif = rng.uniform(-mutation_magnitude, mutation_magnitude)
+                final_gene += dif
             return max(0.0, min(final_gene, 1.0))
 
         new_genes = Genes(
