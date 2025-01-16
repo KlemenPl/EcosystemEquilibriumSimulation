@@ -34,16 +34,26 @@ class SimulationGrapher:
         prey_values = [[] for _ in range(len(opts))]
 
         options = self.simulator.options
+        max_prey_gen = 0
+        max_pred_gen = 0
         for tick in range(num_ticks):
             print(tick)
             state = self.simulator.next_simulation_tick().state
             pred = list(state.predators())
             prey = list(state.prey())
+            max_pred_gen = max(max_pred_gen, max([x.generation for x in pred] + [0]))
+            max_prey_gen = max(max_prey_gen, max([x.generation for x in prey] + [0]))
+            if len(pred) == 0:
+                print("Predators died out")
+            if len(prey) == 0:
+                print("Prey died out")
             for i, opt in enumerate(opts):
                 pred_values[i].append(opt.tracking_func(pred, options, options.predator))
                 prey_values[i].append(opt.tracking_func(prey, options, options.prey))
 
         timestamps = list(range(num_ticks))
+        print("Max prey gen:", max_prey_gen)
+        print("Max pred gen:", max_pred_gen)
 
         for i, opt in enumerate(opts):
             plt.title(opt.title)
