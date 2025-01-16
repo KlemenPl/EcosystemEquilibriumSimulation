@@ -2,7 +2,7 @@ import time
 import argparse
 
 from ecosystem_simulation.simulator import EcosystemSimulator
-from ecosystem_simulation.simulator.options import PredatorSimulationOptions, SimulationOptions, PreySimulationOptions
+from ecosystem_simulation.simulator.options import SimulationOptions, EntitySimulationOptions
 from ecosystem_simulation.visualizer import EcosystemVisualizer
 from ecosystem_simulation.simulation_player import *
 
