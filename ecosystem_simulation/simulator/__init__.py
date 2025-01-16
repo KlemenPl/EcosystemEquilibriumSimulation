@@ -310,7 +310,7 @@ class EcosystemSimulator(SimulatorBackend):
                 closest_food = None
                 food_dst = opts.world_width * opts.world_height
                 for food in world.iter_nearby_food(prey.position, vision):
-                    dst = food.position.distance_from(food.position)
+                    dst = prey.position.distance_from(food.position)
                     if dst < food_dst:
                         closest_food = food
                         food_dst = dst
@@ -326,7 +326,7 @@ class EcosystemSimulator(SimulatorBackend):
                         continue
                     if not mate.mature or mate.pregnant:
                         continue
-                    dst = mate.position.distance_from(mate.position)
+                    dst = prey.position.distance_from(mate.position)
                     if dst < mate_dst:
                         closest_mate = mate
                         mate_dst = dst
@@ -344,7 +344,7 @@ class EcosystemSimulator(SimulatorBackend):
                 closest_food = None
                 food_dst = opts.world_width * opts.world_height
                 for food in world.iter_nearby_prey(pred.position, vision):
-                    dst = food.position.distance_from(food.position)
+                    dst = pred.position.distance_from(food.position)
                     if dst < food_dst:
                         closest_food = food
                         food_dst = dst
@@ -360,7 +360,7 @@ class EcosystemSimulator(SimulatorBackend):
                         continue
                     if not mate.mature or mate.pregnant:
                         continue
-                    dst = mate.position.distance_from(mate.position)
+                    dst = pred.position.distance_from(mate.position)
                     if dst < mate_dst:
                         closest_mate = mate
                         mate_dst = dst
