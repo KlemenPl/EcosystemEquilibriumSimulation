@@ -4,7 +4,7 @@ from ecosystem_simulation.simulation_player import *
 
 def main():
     #opts: SimulationOptions = SimulationOptions.from_json_file("optimization_results/best_20250115-214026_481.json")
-    opts: SimulationOptions = SimulationOptions.from_json_file("optimization_results/best_2.json")
+    opts: SimulationOptions = SimulationOptions.from_json_file("optimization_results/best_20250116-224426_5000.json")
     simulator = EcosystemSimulator(
         options_=opts,
     )

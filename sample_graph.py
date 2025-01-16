@@ -3,7 +3,7 @@ from ecosystem_simulation.simulation_player import *
 
 
 def main():
-    opts: SimulationOptions = SimulationOptions.from_json_file("optimization_results/best_2.json")
+    opts: SimulationOptions = SimulationOptions.from_json_file("optimization_results/best_20250116-224426_5000.json")
     simulator = EcosystemSimulator(
         options_=opts,
     )
@@ -103,7 +103,7 @@ def main():
 
     ]
 
-    grapher.plot(1720, graphs)
+    grapher.plot(5000, graphs)
 
 
 if __name__ == '__main__':
