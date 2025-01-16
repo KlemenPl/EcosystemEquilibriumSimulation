@@ -80,7 +80,7 @@ class SimulationGrapher:
     def lifespan(entities: list[Creature], opts: SimulationOptions, entity_opts: EntitySimulationOptions) -> Optional[float]:
         if len(entities) == 0:
             return None
-        return sum([x.genes.lifespan for x in entities]) / len(entities)
+        return sum([x.genes.lifespan  * entity_opts.max_age_in_ticks for x in entities]) / len(entities)
 
     @staticmethod
     def maturity_age(entities: list[Creature], opts: SimulationOptions, entity_opts: EntitySimulationOptions) -> Optional[float]:
@@ -110,7 +110,7 @@ class SimulationGrapher:
     def vision(entities: list[Creature], opts: SimulationOptions, entity_opts: EntitySimulationOptions) -> Optional[float]:
         if len(entities) == 0:
             return None
-        return sum([x.genes.vision for x in entities]) / len(entities)
+        return sum([round(x.genes.vision * opts.max_vision_distance) for x in entities]) / len(entities)
 
     @staticmethod
     def reproduction_urge(entities: list[Creature], opts: SimulationOptions, entity_opts: EntitySimulationOptions) -> Optional[float]:
