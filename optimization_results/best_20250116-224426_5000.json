@@ -1,0 +1,6 @@
+{
+    "timestamp": "20250116-224426",
+    "seed": 2290950759,
+    "score": 5000,
+    "params": "{\"randomness_seed\": 2290950759, \"world_width\": 256, \"world_height\": 256, \"max_vision_distance\": 8, \"child_gene_mutation_chance_when_mating\": 0.07, \"child_gene_mutation_magnitude_when_mating\": 0.09, \"food_item_spawning_rate_per_tick\": 18, \"food_item_life_tick\": 90, \"initial_number_of_food_items\": 733, \"max_number_of_food_items\": 1264, \"predator\": {\"initial_number\": 445, \"initial_satiation_on_spawn\": 0.2, \"max_juvenile_in_ticks\": 20, \"max_gestation_in_ticks\": 20, \"max_age_in_ticks\": 80, \"max_children_per_birth\": 8, \"satiation_per_feeding\": 0.9, \"satiation_loss_per_tick\": 0.01}, \"prey\": {\"initial_number\": 399, \"initial_satiation_on_spawn\": 0.24, \"max_juvenile_in_ticks\": 20, \"max_gestation_in_ticks\": 20, \"max_age_in_ticks\": 80, \"max_children_per_birth\": 8, \"satiation_per_feeding\": 0.6, \"satiation_loss_per_tick\": 0.01}}"
+}
