@@ -74,6 +74,9 @@ class SimulationOptions:
         predator = EntitySimulationOptions(**params.pop("predator"))
         prey = EntitySimulationOptions(**params.pop("prey"))
 
+        if "logic_determine_creature_state" not in params:
+            params["logic_determine_creature_state"] = LogicType.NORMAL
+
         return SimulationOptions(**params, predator=predator, prey=prey)
 
     @staticmethod
