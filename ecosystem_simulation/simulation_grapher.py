@@ -52,14 +52,14 @@ class SimulationGrapher:
 
             if opt.filled:
                 if opt.plot_pred:
-                    plt.fill_between(timestamps, pred_values[i], color="red", label="Predator", alpha=1.0)
+                    plt.fill_between(timestamps, pred_values[i], color="red", label="Plenilec", alpha=1.0)
                 if opt.plot_prey:
-                    plt.fill_between(timestamps, prey_values[i], color="green", label="Prey", alpha=0.4)
+                    plt.fill_between(timestamps, prey_values[i], color="green", label="Plen", alpha=0.4)
             else:
                 if opt.plot_pred:
-                    plt.plot(timestamps, pred_values[i], 'r-', label="Predator")
+                    plt.plot(timestamps, pred_values[i], 'r-', label="Plenilec")
                 if opt.plot_prey:
-                    plt.plot(timestamps, prey_values[i], 'g-', label="Prey")
+                    plt.plot(timestamps, prey_values[i], 'g-', label="Plen")
 
             plt.legend()
             plt.grid(True)
