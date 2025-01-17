@@ -11,18 +11,18 @@ def main():
     simulator = EcosystemSimulator(
         options_=SimulationOptions(
             randomness_seed=77779113,
-            logic_determine_creature_state=LogicType.FUZZY,
-            world_width=10,
-            world_height=10,
+            logic_determine_creature_state=LogicType.NORMAL,
+            world_width=256,
+            world_height=256,
             max_vision_distance=16,
             child_gene_mutation_chance_when_mating=0.1,
             child_gene_mutation_magnitude_when_mating=0.05,
             food_item_spawning_rate_per_tick=1,
             food_item_life_tick=80,
-            initial_number_of_food_items=3,
+            initial_number_of_food_items=100,
             max_number_of_food_items=5,
             predator=EntitySimulationOptions(
-                initial_number=2,
+                initial_number=10,
                 initial_satiation_on_spawn=0.7,
                 max_juvenile_in_ticks=30,
                 max_gestation_in_ticks=20,
@@ -32,7 +32,7 @@ def main():
                 satiation_loss_per_tick=0.025,
             ),
             prey=EntitySimulationOptions(
-                initial_number=5,
+                initial_number=50,
                 initial_satiation_on_spawn=0.5,
                 max_juvenile_in_ticks=30,
                 max_gestation_in_ticks=20,

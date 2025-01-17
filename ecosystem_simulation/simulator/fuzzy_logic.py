@@ -3,11 +3,14 @@ import skfuzzy as fuzz
 from skfuzzy import control as ctrl
 from enum import Enum, StrEnum
 import matplotlib.pyplot as plot
+import matplotlib
 from dataclasses import dataclass, fields
 from skfuzzy.control import Antecedent, Consequent
 from sys import maxsize
 
 from ecosystem_simulation.simulator.models.creature import Creature, Predator, Prey
+
+#matplotlib.rcParams['figure.dpi'] = 200  # Use this to upscale plots (for hidpi screens)
 
 
 @dataclass(slots=True)
@@ -69,7 +72,7 @@ class State(Enum):
     IDLE = 1
     REPRODUCTION = 2
 
-WANDERING_STATE_SCALE = 0.2
+IDLE_STATE_SCALE = 0.2
 GENE_SCALE = 0.1  # Genes are less impactful than other attributes like satiation
 DISTANCE_SCALE = 0.8
 standard_range = np.arange(0, 11)
@@ -135,21 +138,20 @@ def determine_state_fuzzy(creature: Creature, vision: int, food_distance: float,
     maturity[Level.LOW] = fuzz.trimf(maturity.universe, lower_triangle_shape)
     maturity[Level.HIGH] = fuzz.trimf(maturity.universe, upper_triangle_shape)
 
-    #distance_mate.view()
-    #plot.show()
-
     state[State.FOOD.name] = fuzz.trimf(state.universe, [0, 0, 3])
     # Idle shape is scaled down to reduce the likelihood of character being in idle mode
-    state[State.IDLE.name] = WANDERING_STATE_SCALE * fuzz.trimf(state.universe, [2, 3, 4])
+    state[State.IDLE.name] = IDLE_STATE_SCALE * fuzz.trimf(state.universe, [2, 3, 4])
     state[State.REPRODUCTION.name] = fuzz.trimf(state.universe, [3, 6, 6])
 
     # RULES ###########################################################################
     # Note: all inputs have to be used to avoid error
 
     rules = [
+        # Main rules for FOOD and REPRODUCTION states
         ctrl.Rule((satiation[Level.LOW] & reproductive_urge[Level.LOW]) | maturity[Level.LOW] | pregnancy[Level.HIGH], state[State.FOOD.name]),
         ctrl.Rule(reproductive_urge[Level.HIGH] & maturity[Level.HIGH] & satiation[Level.HIGH], state[State.REPRODUCTION.name]),
 
+        # Rules for targets' distances
         ctrl.Rule(distance_mate[Distance.CLOSE] & maturity[Level.HIGH] & pregnancy[Level.LOW], state[State.REPRODUCTION.name]),
         ctrl.Rule(distance_mate[Distance.OUT_OF_RANGE] & distance_food[Distance.OUT_OF_RANGE], state[State.IDLE.name]),
         ctrl.Rule(distance_food[Distance.CLOSE], state[State.FOOD.name]),
@@ -158,6 +160,7 @@ def determine_state_fuzzy(creature: Creature, vision: int, food_distance: float,
         ctrl.Rule(distance_food[Distance.FAR] & distance_mate[Distance.CLOSE] & maturity[Level.HIGH] & pregnancy[Level.LOW], state[State.REPRODUCTION.name]),
         ctrl.Rule(distance_mate[Distance.FAR] & distance_food[Distance.CLOSE], state[State.FOOD.name]),
 
+        # Less impactful genes' rules
         ctrl.Rule(genes.appetite[Level.HIGH], state[State.FOOD.name]),
         ctrl.Rule(genes.reproductive_urge_quickness[Level.HIGH], state[State.REPRODUCTION.name]),
         ctrl.Rule(genes.lifespan[Level.HIGH], state[State.FOOD.name]),
@@ -177,7 +180,7 @@ def determine_state_fuzzy(creature: Creature, vision: int, food_distance: float,
 
     # FUZZYFICATION #########################################################################
 
-    # It the food is too far away set the distance to 15
+    # It the target is too far away set the distance to 15
     if food_distance != 0:
         food_distance = (food_distance / vision) * 10 if food_distance < maxsize else 15
 
@@ -219,10 +222,10 @@ def determine_state_fuzzy(creature: Creature, vision: int, food_distance: float,
         output_state = State.IDLE
 
     #output_state = State(output_state_num)
-    if isinstance(creature, Predator):
-        print(f"OUTPUT STATE of predator {creature.id}: {output_state.name}")
-    else:
-        print(f"OUTPUT STATE of prey {creature.id}: {output_state.name}")
+    #if isinstance(creature, Predator):
+    #    print(f"OUTPUT STATE of predator {creature.id}: {output_state.name}")
+    #else:
+    #    print(f"OUTPUT STATE of prey {creature.id}: {output_state.name}")
 
     # Plot the result
     #state.view(sim=state_sim)
