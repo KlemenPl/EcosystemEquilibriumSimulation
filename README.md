@@ -1,1 +1,3 @@
 # EcosystemEquilibriumSimulation
+
+![](sample.gif)
